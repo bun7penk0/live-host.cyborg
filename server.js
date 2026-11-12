@@ -1,18 +1,25 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
+
+// 1. เปิดให้ทุกโดเมนสามารถเชื่อมต่อได้ (แก้ปัญหา CORS)
 app.use(cors());
 app.use(express.json());
 
-// ⚠️ ใส่ API Key ของคุณใน Environment Variables ของ Render/Railway
+// 2. เพิ่ม Route / เพื่อให้เช็กได้ว่า Server ทำงาน
+app.get('/', (req, res) => {
+    res.send('🤖 Cyborg Backend is Running!');
+});
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY; 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; // Voice ID ของ ElevenLabs
+const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; 
 
-// 1. Endpoint สำหรับ Gemini
+// 3. Endpoint สำหรับ Gemini AI
 app.post('/api/chat', async (req, res) => {
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+        // เปลี่ยนเป็น gemini-1.5-flash เพื่อความเร็วและรองรับ API Key ใหม่
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -22,11 +29,12 @@ app.post('/api/chat', async (req, res) => {
         const data = await response.json();
         res.json({ reply: data.candidates[0].content.parts[0].text });
     } catch (error) {
+        console.error("Gemini Error:", error);
         res.status(500).json({ error: "AI Error" });
     }
 });
 
-// 2. Endpoint สำหรับ ElevenLabs TTS
+// 4. Endpoint สำหรับ ElevenLabs TTS
 app.post('/api/tts', async (req, res) => {
     try {
         const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
@@ -41,9 +49,11 @@ app.post('/api/tts', async (req, res) => {
         res.set('Content-Type', 'audio/mpeg');
         res.send(Buffer.from(audioBuffer));
     } catch (error) {
+        console.error("TTS Error:", error);
         res.status(500).json({ error: "TTS Error" });
     }
 });
 
+// 5. รัน Server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`));
