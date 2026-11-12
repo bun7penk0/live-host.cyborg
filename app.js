@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let isDragMode = false;
     let isDragging = false;
     let offsetX = 0, offsetY = 0;
-    let posX = 0, posY = 44;
+    let posX = 0, posY = 44; // ค่าเริ่มต้น
     let isSpeaking = false;
 
     // --- 1. ระบบลากปาก ---
@@ -24,6 +24,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const parsed = JSON.parse(saved);
             posX = parsed.x;
             posY = parsed.y;
+        } else {
+            // ✅ [แก้ไข] ตำแหน่งเริ่มต้น: ขยับขึ้นให้ตรงปาก
+            posX = 0; 
+            posY = -30; // ค่าลบคือขยับขึ้น (ปรับตัวเลขนี้ได้ตามความเหมาะสม)
         }
         updateMouthPosition();
     }
@@ -123,6 +127,8 @@ document.addEventListener("DOMContentLoaded", () => {
         
         addChatBubble("ผู้ชม", text);
         input.value = '';
+        
+        resetSilenceTimer(); // ✅ [แก้ไข] รีเซ็ตเวลาถอยหลังเมื่อมีคนคุย
 
         try {
             // ลองเรียก Gemini ผ่าน Railway
@@ -157,6 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('btnTestTalk').addEventListener('click', () => {
         const text = scriptInput.value.trim();
         if (text) botSpeak(text);
+        resetSilenceTimer(); // ✅ [แก้ไข] รีเซ็ตเวลาถอยหลังเมื่อกดพูด
     });
 
     document.getElementById('btnTestBlink').addEventListener('click', () => {
@@ -174,11 +181,14 @@ document.addEventListener("DOMContentLoaded", () => {
     function resetSilenceTimer() {
         clearTimeout(silenceTimer);
         silenceTimer = setTimeout(() => {
-            if (!isSpeaking) {
+            // ✅ [แก้ไข] เช็กว่าไม่ได้กำลังพูด และไม่ได้พิมพ์อะไรค้างอยู่
+            if (!isSpeaking && !isDragging) { 
                 const prompt = standbyPrompts[Math.floor(Math.random() * standbyPrompts.length)];
                 botSpeak(prompt);
             }
         }, 15000); // 15 วินาที
     }
+    
+    // เริ่มต้นจับเวลา
     resetSilenceTimer();
 });
