@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI Cybernetic Host - Bumblebee</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <div class="badge">CYBER ROOM • Live Studio</div>
+            <div class="status-badge" id="liveStatus">STANDBY</div>
+        </header>
+
+        <div class="studio-container" id="studioContainer">
+            <div class="bg-cyber"></div>
+
+            <!-- กล่องแชท -->
+            <div class="chat-overlay" id="chatOverlay"></div>
+
+            <!-- ตัวละครหลัก -->
+            <div class="character-wrapper" id="characterWrapper">
+                <img src="https://i.ibb.co/6PZqXqz/cyborg-man.jpg" alt="Cyber Host" class="character-image" id="characterImage" draggable="false">
+                
+                <!-- ลำโพง (ปาก) -->
+                <div class="mouth-part" id="mouthPart">
+                    <div class="mouth-shape" id="mouthShape"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <!-- ช่องแชทจำลอง -->
+            <h3>🧪 จำลองแชทผู้ชม (ทดสอบ)</h3>
+            <div class="mock-chat-group">
+                <input type="text" id="mockChatInput" placeholder="พิมพ์คำถามผู้ชม...">
+                <button onclick="sendMockChat()" class="btn-send">ส่ง</button>
+            </div>
+
+            <!-- ปุ่มทดสอบ -->
+            <h3>ทดสอบอนิเมชัน</h3>
+            <div class="button-group">
+                <button class="btn btn-eye" id="btnTestBlink">⚡ กะพริบแสง</button>
+                <button class="btn btn-mouth" id="btnTestTalk">🎙️ พูดบท</button>
+            </div>
+
+            <!-- บทพูด -->
+            <h3>บทพูดภาษาไทย</h3>
+            <textarea id="scriptInput" rows="2">สวัสดีครับ ผมคือพี่โอม พิธีกร AI ประจำรายการวันนี้</textarea>
+
+            <!-- ปรับตำแหน่ง -->
+            <h3>ปรับตำแหน่งปาก</h3>
+            <button class="btn btn-toggle-drag" id="btnToggleDrag">👉 เปิดโหมดลากปาก</button>
+            <button class="btn btn-save" onclick="savePositions()">🔒 บันทึกตำแหน่ง</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
