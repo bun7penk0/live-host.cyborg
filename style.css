@@ -9,6 +9,7 @@
 body {
     background-color: var(--bg-dark);
     height: 100vh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -18,25 +19,26 @@ body {
 .app-container { display: flex; flex-direction: column; height: 100%; }
 
 header {
-    display: flex; justify-content: space-between; padding: 15px; background: #1e1e1e; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 12px 15px; background: #1e1e1e; z-index: 10;
 }
 
-.badge { background: #333; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; border: 1px solid var(--cyber-blue); color: var(--cyber-blue); }
+.badge { background: #333; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; border: 1px solid var(--cyber-blue); color: var(--cyber-blue); white-space: nowrap; }
 .status-badge { background: #9e9e9e; color: white; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; }
 
-/* === 1. กรอบ Cyber Frame สวยๆ === */
+/* === 1. กรอบ Cyber Frame === */
 .studio-container {
     position: relative; 
     flex: 1; 
+    min-height: 0;
     overflow: hidden; 
     display: flex; 
     align-items: center; 
     justify-content: center;
     background: var(--bg-dark);
-    padding: 15px; /* เว้นขอบให้กรอบไฟ */
+    padding: 12px;
 }
 
-/* กรอบล้อมรอบตัวละคร */
 .cyber-frame {
     position: relative;
     width: 100%;
@@ -45,12 +47,13 @@ header {
     overflow: hidden;
     border: 1px solid rgba(0, 229, 255, 0.6);
     box-shadow: 
-        0 0 20px rgba(0, 229, 255, 0.4),
-        0 0 60px rgba(0, 229, 255, 0.15),
-        inset 0 0 20px rgba(0, 229, 255, 0.15);
+        0 0 20px rgba(0, 229, 255, 0.35),
+        0 0 60px rgba(0, 229, 255, 0.12),
+        inset 0 0 20px rgba(0, 229, 255, 0.12);
     display: flex;
     align-items: center;
     justify-content: center;
+    background: radial-gradient(ellipse at center, #111827 0%, #000 70%);
 }
 
 /* ไฟวิ่งขอบบน */
@@ -62,6 +65,7 @@ header {
     background: linear-gradient(90deg, transparent, var(--cyber-blue), transparent);
     animation: scan 2.5s linear infinite;
     z-index: 5;
+    pointer-events: none;
 }
 
 @keyframes scan {
@@ -72,15 +76,17 @@ header {
 /* มุมกรอบแบบหุ่นยนต์ 4 มุม */
 .cyber-corner {
     position: absolute;
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border: 2px solid var(--cyber-yellow);
     z-index: 6;
+    pointer-events: none;
+    opacity: 0.9;
 }
-.cyber-corner.tl { top: 10px; left: 10px; border-right: none; border-bottom: none; }
-.cyber-corner.tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
-.cyber-corner.bl { bottom: 10px; left: 10px; border-right: none; border-top: none; }
-.cyber-corner.br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
+.cyber-corner.tl { top: 10px; left: 10px; border-right: none; border-bottom: none; border-top-left-radius: 6px; }
+.cyber-corner.tr { top: 10px; right: 10px; border-left: none; border-bottom: none; border-top-right-radius: 6px; }
+.cyber-corner.bl { bottom: 10px; left: 10px; border-right: none; border-top: none; border-bottom-left-radius: 6px; }
+.cyber-corner.br { bottom: 10px; right: 10px; border-left: none; border-top: none; border-bottom-right-radius: 6px; }
 
 .character-wrapper {
     position: relative; 
@@ -92,14 +98,17 @@ header {
 }
 
 .character-image {
-    max-height: 60vh; 
+    max-height: 100%; 
     max-width: 100%; 
+    height: 100%;
+    width: auto;
     object-fit: contain; 
     pointer-events: none; 
     transition: filter 0.1s ease;
+    display: block;
 }
 
-/* === 2. ลำโพง (ปาก) === */
+/* === 2. ลำโพง (ปาก) - แก้ใหม่ ไม่ล็อคตำแหน่งใน CSS แล้ว === */
 .mouth-part {
     position: absolute; 
     width: 44px; 
@@ -109,10 +118,8 @@ header {
     align-items: center; 
     z-index: 10; 
     pointer-events: none;
-    /* ตำแหน่งเริ่มต้น: ขยับขึ้นมาให้ตรงปาก */
-    top: 50%; 
-    left: 50%;
-    transform: translate(-50%, -50%); 
+    /* ไม่ใส่ top/left/transform ตรงนี้แล้ว ให้ JS เป็นคนสั่ง 100% */
+    touch-action: none;
 }
 
 .mouth-shape {
@@ -140,7 +147,7 @@ header {
 /* === 3. คลื่นเสียง === */
 .sound-wave {
     position: absolute;
-    bottom: 20px; 
+    bottom: 18px; 
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -150,6 +157,7 @@ header {
     opacity: 0;
     transition: opacity 0.3s;
     z-index: 5;
+    pointer-events: none;
 }
 
 .sound-wave.active { opacity: 1; }
@@ -170,31 +178,48 @@ header {
 
 @keyframes wave { 0% { height: 5px; } 100% { height: 30px; } }
 
-/* === 4. กล่องข้อความพี่โอม (Speech Box) === */
+/* === 4. กล่องข้อความ - แก้ใหม่: ย้ายลงล่าง + เล็ก + ไม่บังหน้า === */
 .chat-overlay {
-    position: absolute; top: 15px; left: 15px; width: 85%; max-height: 150px; overflow-y: auto; z-index: 15; display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+    position: absolute;
+    bottom: 52px; /* อยู่เหนือคลื่นเสียงนิดเดียว ไม่บังหน้า */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 92%;
+    max-height: 78px;
+    overflow: hidden;
+    z-index: 15;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: none;
 }
 .chat-bubble {
-    background: rgba(0, 0, 0, 0.75); 
+    background: rgba(0, 0, 0, 0.55); 
     backdrop-filter: blur(8px);
-    border-left: 4px solid var(--cyber-yellow); /* สีเหลืองเฉพาะเส้นซ้าย */
-    border-radius: 12px;
-    padding: 12px 14px;
+    border-left: 3px solid var(--cyber-yellow);
+    border-radius: 10px;
+    padding: 7px 10px;
     color: white;
     box-shadow: 0 0 20px rgba(0,0,0,0.5);
-    font-size: 0.9rem; 
+    font-size: 0.85rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
     animation: slideIn 0.3s ease-out; 
+    word-break: break-word;
 }
-.chat-bubble.bot-reply { /* สีเหลืองสำหรับพี่โอม */ }
+.chat-bubble.bot-reply { }
 .chat-bubble .user-name { font-weight: bold; margin-right: 5px; color: var(--cyber-yellow); }
-@keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 /* === 5. แผงควบคุม === */
-.control-panel { background: #1e1e1e; padding: 15px; border-radius: 20px 20px 0 0; z-index: 10; overflow-y: auto; max-height: 45vh; }
+.control-panel { background: #1e1e1e; padding: 15px; border-radius: 20px 20px 0 0; z-index: 10; overflow-y: auto; max-height: 45vh; flex-shrink: 0; }
 .section-title { font-size: 1rem; margin-bottom: 5px; color: #ccc; margin-top: 10px;}
 .mock-chat-group { display: flex; gap: 5px; margin-bottom: 10px; }
-.mock-chat-group input { flex: 1; padding: 10px; border-radius: 5px; border: none; background: #333; color: white; }
-.btn-send { padding: 10px 15px; border-radius: 5px; border: none; background: var(--cyber-blue); color: black; font-weight: bold; cursor: pointer;}
+.mock-chat-group input { flex: 1; min-width: 0; padding: 10px; border-radius: 5px; border: none; background: #333; color: white; }
+.btn-send { padding: 10px 15px; border-radius: 5px; border: none; background: var(--cyber-blue); color: black; font-weight: bold; cursor: pointer; white-space: nowrap;}
 
 .button-group { display: flex; gap: 10px; margin-bottom: 10px; }
 .btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: bold; color: white; cursor: pointer; transition: 0.2s; }
