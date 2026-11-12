@@ -28,12 +28,12 @@ header {
 
 /* === 1. กรอบ Cyber Frame === */
 .studio-container {
-    position: relative; 
-    flex: 1; 
+    position: relative;
+    flex: 1;
     min-height: 0;
-    overflow: hidden; 
-    display: flex; 
-    align-items: center; 
+    overflow: hidden;
+    display: flex;
+    align-items: center;
     justify-content: center;
     background: var(--bg-dark);
     padding: 12px;
@@ -46,17 +46,13 @@ header {
     border-radius: 20px;
     overflow: hidden;
     border: 1px solid rgba(0, 229, 255, 0.6);
-    box-shadow: 
-        0 0 20px rgba(0, 229, 255, 0.35),
-        0 0 60px rgba(0, 229, 255, 0.12),
-        inset 0 0 20px rgba(0, 229, 255, 0.12);
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.35), 0 0 60px rgba(0, 229, 255, 0.12), inset 0 0 20px rgba(0, 229, 255, 0.12);
     display: flex;
     align-items: center;
     justify-content: center;
     background: radial-gradient(ellipse at center, #111827 0%, #000 70%);
 }
 
-/* ไฟวิ่งขอบบน */
 .cyber-frame::before {
     content: "";
     position: absolute;
@@ -73,7 +69,6 @@ header {
     100% { transform: translateX(100%); }
 }
 
-/* มุมกรอบแบบหุ่นยนต์ 4 มุม */
 .cyber-corner {
     position: absolute;
     width: 22px;
@@ -89,65 +84,66 @@ header {
 .cyber-corner.br { bottom: 10px; right: 10px; border-left: none; border-top: none; border-bottom-right-radius: 6px; }
 
 .character-wrapper {
-    position: relative; 
-    display: flex; 
-    justify-content: center; 
+    position: relative;
+    display: flex;
+    justify-content: center;
     align-items: center;
     width: 100%;
     height: 100%;
 }
 
 .character-image {
-    max-height: 100%; 
-    max-width: 100%; 
+    max-height: 100%;
+    max-width: 100%;
     height: 100%;
     width: auto;
-    object-fit: contain; 
-    pointer-events: none; 
+    object-fit: contain;
+    pointer-events: none;
     transition: filter 0.1s ease;
     display: block;
 }
 
-/* === 2. ลำโพง (ปาก) - แก้ใหม่ ไม่ล็อคตำแหน่งใน CSS แล้ว === */
-.position {
-     .mouth-part {
+/* === 2. ปาก / ไมค์ - ขนาดเท่าปากพอดี 38px === */
+.mouth-part {
+    position: absolute;
     width: 38px;
     height: 38px;
-    display: flflex
-    justify-content: center; 
-    align-items: center; 
-    z-index: 10; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
     pointer-events: none;
-    /* ไม่ใส่ top/left/transform ตรงนี้แล้ว ให้ JS เป็นคนสั่ง 100% */
     touch-action: none;
+    will-change: transform;
+    overflow: visible;
 }
 
 .mouth-shape {
-    width: 100%; 
-    height: 100%; 
-    background: radial-gradient(circle, #222 30%, #000 70%); 
-    border: 2px solid var(--cyber-blue); 
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, #222 30%, #000 70%);
+    border: 2px solid var(--cyber-blue);
     border-radius: 50%;
     box-shadow: 0 0 10px rgba(0, 229, 255, 0.5), inset 0 0 10px rgba(0, 229, 255, 0.5);
-    position: relative; 
-    display: flex; 
-    justify-content: center; 
-    align-items: center; 
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     transition: transform 0.1s, box-shadow 0.1s;
 }
 
-.mouth-shape::after { 
-    content: ''; 
-    width: 60%; 
-    height: 60%; 
-    background: #111; 
-    border-radius: 50%; 
+.mouth-shape::after {
+    content: '';
+    width: 60%;
+    height: 60%;
+    background: #111;
+    border-radius: 50%;
 }
 
-/* === 3. คลื่นเสียง === */
+/* === 3. คลื่นเสียงด้านล่าง === */
 .sound-wave {
     position: absolute;
-    bottom: 18px; 
+    bottom: 18px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -178,10 +174,10 @@ header {
 
 @keyframes wave { 0% { height: 5px; } 100% { height: 30px; } }
 
-/* === 4. กล่องข้อความ - แก้ใหม่: ย้ายลงล่าง + เล็ก + ไม่บังหน้า === */
+/* === 4. กล่องข้อความ - อยู่ล่าง ไม่บังหน้า === */
 .chat-overlay {
     position: absolute;
-    bottom: 52px; /* อยู่เหนือคลื่นเสียงนิดเดียว ไม่บังหน้า */
+    bottom: 52px;
     left: 50%;
     transform: translateX(-50%);
     width: 92%;
@@ -194,7 +190,7 @@ header {
     pointer-events: none;
 }
 .chat-bubble {
-    background: rgba(0, 0, 0, 0.55); 
+    background: rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(8px);
     border-left: 3px solid var(--cyber-yellow);
     border-radius: 10px;
@@ -207,19 +203,18 @@ header {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    animation: slideIn 0.3s ease-out; 
+    animation: slideIn 0.3s ease-out;
     word-break: break-word;
 }
-.chat-bubble.bot-reply { }
 .chat-bubble .user-name { font-weight: bold; margin-right: 5px; color: var(--cyber-yellow); }
 @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 /* === 5. แผงควบคุม === */
 .control-panel { background: #1e1e1e; padding: 15px; border-radius: 20px 20px 0 0; z-index: 10; overflow-y: auto; max-height: 45vh; flex-shrink: 0; }
-.section-title { font-size: 1rem; margin-bottom: 5px; color: #ccc; margin-top: 10px;}
+.section-title { font-size: 1rem; margin-bottom: 5px; color: #ccc; margin-top: 10px; }
 .mock-chat-group { display: flex; gap: 5px; margin-bottom: 10px; }
 .mock-chat-group input { flex: 1; min-width: 0; padding: 10px; border-radius: 5px; border: none; background: #333; color: white; }
-.btn-send { padding: 10px 15px; border-radius: 5px; border: none; background: var(--cyber-blue); color: black; font-weight: bold; cursor: pointer; white-space: nowrap;}
+.btn-send { padding: 10px 15px; border-radius: 5px; border: none; background: var(--cyber-blue); color: black; font-weight: bold; cursor: pointer; white-space: nowrap; }
 
 .button-group { display: flex; gap: 10px; margin-bottom: 10px; }
 .btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: bold; color: white; cursor: pointer; transition: 0.2s; }
@@ -231,9 +226,17 @@ header {
 .btn-save { background: var(--cyber-blue); color: black; width: 100%; }
 textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: white; margin-bottom: 10px; resize: none; font-family: inherit; }
 
-/* อนิเมชันปากตอนพูด */
+/* === 6. ไมค์สั่น + คลื่นเสียงรอบปาก === */
+.character-wrapper.talking #mouthPart {
+    animation: micShakeFixed 0.12s infinite alternate ease-in-out;
+}
+@keyframes micShakeFixed {
+    0% { translate: -1px 0px; }
+    100% { translate: 1px -1px; }
+}
+
 .character-wrapper.talking .mouth-shape {
-    animation: mouthOpen 0.15s infinite alternate;
+    animation: mouthOpen 0.14s infinite alternate, micGlow 0.14s infinite alternate;
 }
 
 @keyframes mouthOpen {
@@ -241,35 +244,11 @@ textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #44
     100% { transform: scale(1.15); }
 }
 
-.character-wrapper.blinking .character-image { 
-    filter: brightness(1.5) drop-shadow(0 0 25px rgba(0, 229, 255, 1)); 
-}
-/* === ไมค์สั่น + คลื่นเสียงรอบปาก ตอนพูด === */
-#mouthPart {
-    will-change: transform;
-}
-
-/* ตอนพูด ให้ปากสั่นเบาๆ */
-.character-wrapper.talking #mouthPart {
-    animation: micShakeFixed 0.12s infinite alternate ease-in-out;
-}
-
-@keyframes micShakeFixed {
-    0% { translate: -1px 0px; }
-    100% { translate: 1px -1px; }
-}
-
-/* ตอนพูด ให้ปากขยาย-หดตามจังหวะพูด */
-.character-wrapper.talking .mouth-shape {
-    animation: mouthOpen 0.14s infinite alternate, micGlow 0.14s infinite alternate;
-}
-
 @keyframes micGlow {
     0% { box-shadow: 0 0 8px rgba(0,229,255,0.5), inset 0 0 8px rgba(0,229,255,0.4); }
     100% { box-shadow: 0 0 18px rgba(0,229,255,0.95), inset 0 0 14px rgba(0,229,255,0.8); }
 }
 
-/* คลื่นเสียงวงกลมเล็กๆ รอบปาก */
 .mouth-wave {
     position: absolute;
     width: 100%;
@@ -280,18 +259,15 @@ textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #44
     pointer-events: none;
     z-index: -1;
 }
-
-.character-wrapper.talking .mouth-wave {
-    animation: mouthWave 0.9s infinite ease-out;
-}
-.character-wrapper.talking .mouth-wave.w2 {
-    animation-delay: 0.3s;
-}
-.character-wrapper.talking .mouth-wave.w3 {
-    animation-delay: 0.6s;
-}
+.character-wrapper.talking .mouth-wave { animation: mouthWave 0.9s infinite ease-out; }
+.character-wrapper.talking .mouth-wave.w2 { animation-delay: 0.3s; }
+.character-wrapper.talking .mouth-wave.w3 { animation-delay: 0.6s; }
 
 @keyframes mouthWave {
     0% { transform: scale(1); opacity: 0.9; }
     100% { transform: scale(2.1); opacity: 0; }
+}
+
+.character-wrapper.blinking .character-image {
+    filter: brightness(1.5) drop-shadow(0 0 25px rgba(0, 229, 255, 1));
 }
