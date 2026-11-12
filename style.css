@@ -1,86 +1,246 @@
-:root {
-    --cyber-blue: #00e5ff;
-}
+// app.js - Frontend สำหรับ AI Cybernetic Host
+// ⚠️ ต้องมี Backend (Node.js) รันอยู่ที่ http://localhost:3000 หรือ URL ที่ Deploy
 
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; user-select: none; }
+const BACKEND_URL = "http://localhost:3000"; // เปลี่ยนเป็น URL จริงเมื่อ Deploy
 
-body {
-    background-color: #121212;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    color: white;
-}
+document.addEventListener("DOMContentLoaded", () => {
+    // ===== DOM Elements =====
+    const mouthPart = document.getElementById('mouthPart');
+    const mouthShape = document.getElementById('mouthShape');
+    const btnToggleDrag = document.getElementById('btnToggleDrag');
+    const wrapper = document.getElementById('characterWrapper');
+    const scriptInput = document.getElementById('scriptInput');
+    const liveStatus = document.getElementById('liveStatus');
+    const chatOverlay = document.getElementById('chatOverlay');
+    const mockChatInput = document.getElementById('mockChatInput');
+    
+    // ===== State =====
+    let isDragMode = false;
+    let isDragging = false;
+    let offsetX = 0, offsetY = 0;
+    let posX = 0, posY = 44;
+    let isSpeaking = false;
+    let talkInterval;
 
-.app-container { display: flex; flex-direction: column; height: 100%; }
+    // ===== 1. Drag & Drop สำหรับลำโพง =====
+    function loadPositions() {
+        const saved = localStorage.getItem('mouthPos');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            posX = parsed.x;
+            posY = parsed.y;
+        }
+        updateMouthPosition();
+    }
+    
+    function updateMouthPosition() { 
+        mouthPart.style.transform = `translate(${posX}px, ${posY}px)`; 
+    }
 
-header {
-    display: flex; justify-content: space-between; padding: 15px; background: #1e1e1e; z-index: 10;
-}
+    btnToggleDrag.addEventListener('click', () => {
+        isDragMode = !isDragMode;
+        btnToggleDrag.classList.toggle('active', isDragMode);
+        btnToggleDrag.textContent = isDragMode ? "🛑 ปิดโหมดลาก" : "👉 เปิดโหมดลากปาก";
+        mouthPart.style.pointerEvents = isDragMode ? 'auto' : 'none';
+        mouthPart.style.outline = isDragMode ? '2px dashed yellow' : 'none';
+    });
 
-.badge { background: #333; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; border: 1px solid var(--cyber-blue); color: var(--cyber-blue); }
-.status-badge { background: #9e9e9e; color: white; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; }
+    mouthPart.addEventListener('pointerdown', (e) => {
+        if (!isDragMode) return;
+        isDragging = true;
+        const rect = mouthPart.getBoundingClientRect();
+        offsetX = e.clientX - rect.left - (rect.width / 2);
+        offsetY = e.clientY - rect.top - (rect.height / 2);
+        e.preventDefault();
+    });
 
-.studio-container {
-    position: relative; flex: 1; overflow: hidden; display: flex; align-items: center; justify-content: center;
-}
+    window.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        const studioRect = document.getElementById('studioContainer').getBoundingClientRect();
+        posX = (e.clientX - studioRect.left) - (studioRect.width / 2) - offsetX;
+        posY = (e.clientY - studioRect.top) - (studioRect.height / 2) - offsetY;
+        updateMouthPosition();
+    });
 
-.bg-cyber {
-    position: absolute; width: 100%; height: 100%; background: radial-gradient(circle at center, #0a192f 0%, #000000 100%); z-index: 1;
-}
+    window.addEventListener('pointerup', () => {
+        if (isDragging) { isDragging = false; savePositions(); }
+    });
 
-.character-wrapper {
-    position: relative; z-index: 2; display: flex; justify-content: center; align-items: center; transition: transform 0.1s ease;
-}
+    window.savePositions = function() {
+        localStorage.setItem('mouthPos', JSON.stringify({ x: posX, y: posY }));
+    };
+    loadPositions();
 
-.character-image {
-    max-height: 50vh; width: auto; max-width: 100vw; object-fit: contain; pointer-events: none; transition: filter 0.1s ease;
-}
+    // ===== 2. Animation Functions =====
+    function startTalkingAnim() {
+        wrapper.classList.add('talking');
+        liveStatus.textContent = "LIVE";
+        liveStatus.style.background = "#f44336";
+        talkInterval = setInterval(() => {
+            const scale = 1 + (Math.random() * 0.3);
+            mouthShape.style.transform = `scale(${scale})`;
+        }, 80);
+    }
 
-/* ลำโพงบับเบิลบี */
-.mouth-part {
-    position: absolute; width: 44px; height: 44px; display: flex; justify-content: center; align-items: center; z-index: 10; pointer-events: none;
-}
+    function stopTalkingAnim() {
+        wrapper.classList.remove('talking');
+        liveStatus.textContent = "STANDBY";
+        liveStatus.style.background = "#9e9e9e";
+        clearInterval(talkInterval);
+        mouthShape.style.transform = 'scale(1)';
+        isSpeaking = false;
+    }
 
-.mouth-shape {
-    width: 100%; height: 100%; background: radial-gradient(circle, #222 30%, #000 70%); border: 2px solid var(--cyber-blue); border-radius: 50%;
-    box-shadow: 0 0 10px rgba(0, 229, 255, 0.5), inset 0 0 10px rgba(0, 229, 255, 0.5);
-    position: relative; display: flex; justify-content: center; align-items: center; transition: transform 0.1s, box-shadow 0.1s;
-}
-.mouth-shape::after { content: ''; width: 60%; height: 60%; background: #111; border-radius: 50%; }
+    // ===== 3. Chat Bubble =====
+    function addChatBubble(user, text, isBot = false) {
+        const bubble = document.createElement('div');
+        bubble.className = `chat-bubble ${isBot ? 'bot-reply' : ''}`;
+        bubble.innerHTML = `<span class="user-name">${user}:</span> ${text}`;
+        chatOverlay.appendChild(bubble);
+        chatOverlay.scrollTop = chatOverlay.scrollHeight;
+        if (chatOverlay.children.length > 5) chatOverlay.removeChild(chatOverlay.firstChild);
+    }
 
-/* แชท */
-.chat-overlay {
-    position: absolute; top: 10px; left: 10px; width: 80%; max-height: 150px; overflow-y: auto; z-index: 5; display: flex; flex-direction: column; gap: 5px; pointer-events: none;
-}
-.chat-bubble {
-    background: rgba(0, 0, 0, 0.7); color: white; padding: 8px 12px; border-radius: 15px; font-size: 0.85rem; border-left: 3px solid var(--cyber-blue); animation: slideIn 0.3s ease-out; backdrop-filter: blur(5px);
-}
-.chat-bubble.bot-reply { border-left-color: #ffeb3b; background: rgba(30, 30, 30, 0.9); }
-.chat-bubble .user-name { font-weight: bold; margin-right: 5px; color: var(--cyber-blue); }
-.chat-bubble.bot-reply .user-name { color: #ffeb3b; }
-@keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+    // ===== 4. ElevenLabs TTS ผ่าน Backend =====
+    // ⚠️ ต้องมี Backend Endpoint: POST /api/tts { text, voiceId }
+    // Backend จะเรียก ElevenLabs API และส่ง audio กลับมา
+    async function speakWithElevenLabs(text) {
+        if (isSpeaking) {
+            // หยุดเสียงเก่า (ถ้า Backend รองรับ)
+            fetch(`${BACKEND_URL}/api/tts/stop`, { method: 'POST' }).catch(() => {});
+        }
+        
+        isSpeaking = true;
+        startTalkingAnim();
+        addChatBubble("พี่โอม", text, true);
 
-/* แผงควบคุม */
-.control-panel { background: #1e1e1e; padding: 15px; border-radius: 20px 20px 0 0; z-index: 10; overflow-y: auto; max-height: 45vh; }
-h3 { font-size: 1rem; margin-bottom: 5px; color: #ccc; margin-top: 10px;}
-.mock-chat-group { display: flex; gap: 5px; margin-bottom: 10px; }
-.mock-chat-group input { flex: 1; padding: 10px; border-radius: 5px; border: none; background: #333; color: white; }
-.btn-send { padding: 10px 15px; border-radius: 5px; border: none; background: var(--cyber-blue); color: black; font-weight: bold; cursor: pointer;}
+        try {
+            const response = await fetch(`${BACKEND_URL}/api/tts`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            });
 
-.button-group { display: flex; gap: 10px; margin-bottom: 10px; }
-.btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: bold; color: white; cursor: pointer; }
-.btn-eye { background: #00796b; }
-.btn-mouth { background: #1976d2; }
-.btn-toggle-drag { background: #f57c00; width: 100%; margin-bottom: 5px; }
-.btn-toggle-drag.active { background: #4caf50; }
-.btn-save { background: var(--cyber-blue); color: black; width: 100%; }
-textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: white; margin-bottom: 10px; resize: none; font-family: inherit; }
+            if (!response.ok) throw new Error('TTS failed');
 
-/* แอนิเมชัน */
-.character-wrapper.talking { animation: sway 0.8s infinite alternate ease-in-out; }
-.character-wrapper.talking .character-image { filter: brightness(1.2) drop-shadow(0 0 15px rgba(0, 229, 255, 0.6)); }
-@keyframes sway { 0% { transform: translateY(0px) rotate(0deg); } 100% { transform: translateY(-5px) rotate(1deg); } }
-.character-wrapper.blinking .character-image { filter: brightness(1.5) drop-shadow(0 0 25px rgba(0, 229, 255, 1)); }
-.character-wrapper.talking .mouth-shape { border-color: #00ffff; box-shadow: 0 0 25px rgba(0, 255, 255, 0.8), inset 0 0 15px rgba(0, 255, 255, 0.8); }
+            // Backend ส่ง audio กลับมาเป็น blob (mp3) หรือ stream
+            const audioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            
+            audio.onended = () => {
+                stopTalkingAnim();
+                URL.revokeObjectURL(audioUrl);
+            };
+            
+            await audio.play();
+
+        } catch (err) {
+            console.error("TTS Error:", err);
+            stopTalkingAnim();
+            // Fallback ไปใช้ Web Speech API ถ้า Backend ล่ม
+            fallbackSpeak(text);
+        }
+    }
+
+    // Fallback Web Speech API (ใช้เมื่อ Backend ไม่พร้อม)
+    function fallbackSpeak(text) {
+        const synth = window.speechSynthesis;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'th-TH';
+        utterance.onstart = () => startTalkingAnim();
+        utterance.onend = () => stopTalkingAnim();
+        synth.speak(utterance);
+    }
+
+    // ===== 5. Gemini AI ผ่าน Backend =====
+    // ⚠️ ต้องมี Backend Endpoint: POST /api/chat { message }
+    // Backend จะเรียก Gemini API พร้อม System Prompt
+    async function processAIResponse(userText) {
+        try {
+            const response = await fetch(`${BACKEND_URL}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: userText })
+            });
+
+            if (!response.ok) throw new Error('Gemini failed');
+            
+            const data = await response.json();
+            const botAnswer = data.reply;
+            
+            // ให้พี่โอมพูดคำตอบ
+            speakWithElevenLabs(botAnswer);
+
+        } catch (err) {
+            console.error("Gemini Error:", err);
+            // Fallback ตอบแบบ Rule-based เดิม
+            const fallbackAnswers = [
+                "ขอโทษครับ พี่โอมคิดไม่ออกตอนนี้",
+                "ลองถามใหม่ได้ไหมครับ"
+            ];
+            speakWithElevenLabs(fallbackAnswers[Math.floor(Math.random() * fallbackAnswers.length)]);
+        }
+    }
+
+    // ===== 6. Mock Chat Input =====
+    window.sendMockChat = function() {
+        const text = mockChatInput.value.trim();
+        if (!text) return;
+        addChatBubble("ผู้ชม", text);
+        mockChatInput.value = '';
+        setTimeout(() => processAIResponse(text), 800);
+    };
+
+    // ===== 7. ปุ่มทดสอบ =====
+    document.getElementById('btnTestTalk').addEventListener('click', () => {
+        const text = scriptInput.value.trim();
+        if (text) speakWithElevenLabs(text);
+    });
+
+    document.getElementById('btnTestBlink').addEventListener('click', () => {
+        wrapper.classList.add('blinking');
+        setTimeout(() => wrapper.classList.remove('blinking'), 150);
+    });
+
+    // ===== 8. Standby Mode (บทพูดอัตโนมัติ) =====
+    const standbyPrompts = [
+        "ใครมีคำถามพิมพ์ถามพี่โอมได้เลยครับ",
+        "ฝากกดไลก์ กดติดตาม เป็นกำลังใจให้พี่โอมด้วยนะครับ",
+        "วันนี้มีเรื่องอะไรอยากคุยกับพี่โอมไหมครับ"
+    ];
+
+    setInterval(() => {
+        if (!isSpeaking) {
+            const prompt = standbyPrompts[Math.floor(Math.random() * standbyPrompts.length)];
+            speakWithElevenLabs(prompt);
+        }
+    }, 20000); // ทุก 20 วินาที
+
+    // ===== 9. เชื่อมต่อ Facebook/TikTok Live Comments =====
+    // ⚠️ ต้องมี Backend Endpoint: GET /api/live-comments (SSE หรือ WebSocket)
+    // Backend จะรับ comments จาก Facebook Graph API หรือ TikTok WebSocket
+    // แล้วส่งต่อมาให้ Frontend ทาง SSE
+    
+    function connectLiveComments() {
+        // ตัวอย่าง SSE (Facebook)
+        const eventSource = new EventSource(`${BACKEND_URL}/api/live-comments/stream`);
+        
+        eventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            // data = { user: "ชื่อผู้ชม", message: "ข้อความ", platform: "facebook" }
+            addChatBubble(data.user, data.message);
+            processAIResponse(data.message);
+        };
+
+        eventSource.onerror = (err) => {
+            console.error("SSE Error:", err);
+            eventSource.close();
+            // ลองเชื่อมใหม่ใน 5 วิ
+            setTimeout(connectLiveComments, 5000);
+        };
+    }
+
+    // เปิดใช้เมื่อมี Backend พร้อม (ตอนนี้ comment ไว้ก่อน)
+    // connectLiveComments();
+});
