@@ -82,23 +82,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- 2. ระบบอนิเมชัน ---
     function startTalkingAnim() {
-        wrapper.classList.add('talking');
-        if (soundWave) soundWave.classList.add('active');
-        if (liveStatus) {
-            liveStatus.textContent = "LIVE";
-            liveStatus.style.background = "#f44336";
-        }
+    wrapper.classList.add('talking');
+    // เพิ่มบรรทัดนี้ - ให้คลื่นเสียงล่างขยับด้วย
+    if (soundWave) soundWave.classList.add('active');
+    if (liveStatus) {
+        liveStatus.textContent = "LIVE";
+        liveStatus.style.background = "#f44336";
     }
+}
 
-    function stopTalkingAnim() {
-        wrapper.classList.remove('talking');
-        if (soundWave) soundWave.classList.remove('active');
-        if (liveStatus) {
-            liveStatus.textContent = "STANDBY";
-            liveStatus.style.background = "#9e9e9e";
-        }
-        isSpeaking = false;
+function stopTalkingAnim() {
+    wrapper.classList.remove('talking');
+    if (soundWave) soundWave.classList.remove('active');
+    if (liveStatus) {
+        liveStatus.textContent = "STANDBY";
+        liveStatus.style.background = "#9e9e9e";
     }
+    isSpeaking = false;
+}
+
+    
 
     // --- 3. ระบบพูด ---
     async function botSpeak(text) {
