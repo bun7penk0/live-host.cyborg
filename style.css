@@ -251,12 +251,12 @@ textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #44
 
 /* ตอนพูด ให้ปากสั่นเบาๆ */
 .character-wrapper.talking #mouthPart {
-    animation: micShake 0.12s infinite alternate ease-in-out;
+    animation: micShakeFixed 0.12s infinite alternate ease-in-out;
 }
 
-@keyframes micShake {
-    0% { margin-left: -1px; margin-top: 0px; }
-    100% { margin-left: 1px; margin-top: -1.5px; }
+@keyframes micShakeFixed {
+    0% { translate: -1px 0px; }
+    100% { translate: 1px -1px; }
 }
 
 /* ตอนพูด ให้ปากขยาย-หดตามจังหวะพูด */
