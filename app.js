@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     // ⚠️ ใส่ URL จาก Railway ของคุณตรงนี้ ⚠️
-    const BACKEND_URL = "https://cyborg-backend-production.up.railway.app"; 
+    const BACKEND_URL = "https://cyborg-backend-production.up.railway.app";
 
     const mouthPart = document.getElementById('mouthPart');
     const btnToggleDrag = document.getElementById('btnToggleDrag');
