@@ -9,61 +9,47 @@
 <body>
 
     <div class="app-container">
-        <!-- Header -->
         <header>
             <div class="badge">CYBER ROOM • Live Studio</div>
             <div class="status-badge" id="liveStatus">STANDBY</div>
         </header>
 
-        <!-- Main Studio View -->
         <div class="studio-container" id="studioContainer">
             <div class="bg-cyber"></div>
-
-            <!-- Chat Overlay -->
             <div class="chat-overlay" id="chatOverlay"></div>
 
-            <!-- Character Layer -->
             <div class="character-wrapper" id="characterWrapper">
-                <!-- ⚠️ สำคัญ: ต้องอัปโหลดไฟล์รูปนี้ขึ้น GitHub ด้วย (เช่น om.jpg) -->
+                <!-- ตรวจสอบชื่อไฟล์รูปให้ตรงกับใน GitHub ของคุณด้วยครับ -->
                 <img src="IMG_20261112_173720.jpg" alt="Cyber Host" class="character-image" id="characterImage" draggable="false">
                 
-                <!-- ลำโพง (ปาก) -->
                 <div class="mouth-part" id="mouthPart">
                     <div class="mouth-shape" id="mouthShape"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Control Panel -->
         <div class="control-panel">
-            
-            <!-- Mock Chat Input -->
             <div class="section-title">🧪 จำลองแชทผู้ชม (ทดสอบ)</div>
             <div class="mock-chat-group">
-                <input type="text" id="mockChatInput" placeholder="พิมพ์คำถามผู้ชม..." onkeypress="if(event.key === 'Enter') sendMockChat()">
+                <input type="text" id="mockChatInput" placeholder="พิมพ์คำถามผู้ชม...">
                 <button onclick="sendMockChat()" class="btn-send">ส่ง</button>
             </div>
 
-            <!-- Test Buttons -->
             <div class="section-title">ทดสอบอนิเมชัน</div>
             <div class="button-group">
                 <button class="btn btn-eye" id="btnTestBlink">⚡ กะพริบแสง</button>
                 <button class="btn btn-mouth" id="btnTestTalk">🎙️ พูดบท</button>
             </div>
 
-            <!-- Script Input -->
             <div class="section-title">บทพูดภาษาไทย</div>
             <textarea id="scriptInput" rows="2">สวัสดีครับ ผมคือพี่โอม พิธีกร AI ประจำรายการวันนี้</textarea>
 
-            <!-- Position Adjustment -->
             <div class="section-title">ปรับตำแหน่งปาก</div>
             <button class="btn btn-toggle-drag" id="btnToggleDrag">👉 เปิดโหมดลากปาก</button>
             <button class="btn btn-save" onclick="savePositions()">🔒 บันทึกตำแหน่ง</button>
-
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="app.js"></script>
 </body>
 </html>
