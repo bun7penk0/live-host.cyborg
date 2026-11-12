@@ -15,52 +15,59 @@
         </header>
 
         <div class="studio-container" id="studioContainer">
-            <div class="bg-cyber"></character-image>
+            <div class="bg-cyber"></div>
             <div class="chat-overlay" id="chatOverlay"></div>
 
+            <!-- ตัวละครหลัก -->
             <div class="character-wrapper" id="characterWrapper">
-    <!-- ตรวจสอบชื่อไฟล์รูปให้ตรงกับใน GitHub ของคุณด้วยครับ -->
-    <img src="IMG_20261112_173720.jpg" alt="Cyber Host" class="character-image" id="characterImage" draggable="false">
-    
-    <div class="mouth-part" id="mouthPart">
-        <div class="mouth-shape" id="mouthShape"></div>
-    </div>
+                
+                <!-- รูปภาพ -->
+                <img src="IMG_20261112_173720.jpg" alt="Cyber Host" class="character-image" id="characterImage" draggable="false">
+                
+                <!-- ลำโพง (ปาก) -->
+                <div class="mouth-part" id="mouthPart">
+                    <div class="mouth-shape" id="mouthShape"></div>
+                </div>
 
-    <!-- 👇 เพิ่มคลื่นเสียงตรงนี้ 👇 -->
-    <div class="sound-wave" id="soundWave">
-        <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
-    </div>
-</div>
-         
-                
-                
-           false                 
-                
+                <!-- คลื่นเสียงตอนพูด -->
+                <div class="sound-wave" id="soundWave">
+                    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                </div>
+
+            </div>
+            <!-- 👆 ปิด character-wrapper ตรงนี้ 👆 -->
             
-    
+        </div> 
+        <!-- 👆 ปิด studio-container ตรงนี้ 👆 -->
 
+        <!-- แผงควบคุม -->
         <div class="control-panel">
+            <!-- ช่องแชทจำลอง -->
             <div class="section-title">🧪 จำลองแชทผู้ชม (ทดสอบ)</div>
             <div class="mock-chat-group">
-                <input type="text" id="mockChatInput" placeholder="พิมพ์คำถามผู้ชม...">
+                <input type="text" id="mockChatInput" placeholder="พิมพ์คำถามผู้ชม..." onkeypress="if(event.key === 'Enter') sendMockChat()">
                 <button onclick="sendMockChat()" class="btn-send">ส่ง</button>
             </div>
 
+            <!-- ปุ่มทดสอบ -->
             <div class="section-title">ทดสอบอนิเมชัน</div>
             <div class="button-group">
                 <button class="btn btn-eye" id="btnTestBlink">⚡ กะพริบแสง</button>
                 <button class="btn btn-mouth" id="btnTestTalk">🎙️ พูดบท</button>
             </div>
 
+            <!-- บทพูด -->
             <div class="section-title">บทพูดภาษาไทย</div>
             <textarea id="scriptInput" rows="2">สวัสดีครับ ผมคือพี่โอม พิธีกร AI ประจำรายการวันนี้</textarea>
 
+            <!-- ปรับตำแหน่ง -->
             <div class="section-title">ปรับตำแหน่งปาก</div>
             <button class="btn btn-toggle-drag" id="btnToggleDrag">👉 เปิดโหมดลากปาก</button>
             <button class="btn btn-save" onclick="savePositions()">🔒 บันทึกตำแหน่ง</button>
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="app.js"></script>
 </body>
 </html>
