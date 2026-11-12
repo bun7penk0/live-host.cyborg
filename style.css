@@ -244,3 +244,54 @@ textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #44
 .character-wrapper.blinking .character-image { 
     filter: brightness(1.5) drop-shadow(0 0 25px rgba(0, 229, 255, 1)); 
 }
+/* === ไมค์สั่น + คลื่นเสียงรอบปาก ตอนพูด === */
+#mouthPart {
+    will-change: transform;
+}
+
+/* ตอนพูด ให้ปากสั่นเบาๆ */
+.character-wrapper.talking #mouthPart {
+    animation: micShake 0.12s infinite alternate ease-in-out;
+}
+
+@keyframes micShake {
+    0% { margin-left: -1px; margin-top: 0px; }
+    100% { margin-left: 1px; margin-top: -1.5px; }
+}
+
+/* ตอนพูด ให้ปากขยาย-หดตามจังหวะพูด */
+.character-wrapper.talking .mouth-shape {
+    animation: mouthOpen 0.14s infinite alternate, micGlow 0.14s infinite alternate;
+}
+
+@keyframes micGlow {
+    0% { box-shadow: 0 0 8px rgba(0,229,255,0.5), inset 0 0 8px rgba(0,229,255,0.4); }
+    100% { box-shadow: 0 0 18px rgba(0,229,255,0.95), inset 0 0 14px rgba(0,229,255,0.8); }
+}
+
+/* คลื่นเสียงวงกลมเล็กๆ รอบปาก */
+.mouth-wave {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 1.5px solid rgba(0,229,255,0.8);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.character-wrapper.talking .mouth-wave {
+    animation: mouthWave 0.9s infinite ease-out;
+}
+.character-wrapper.talking .mouth-wave.w2 {
+    animation-delay: 0.3s;
+}
+.character-wrapper.talking .mouth-wave.w3 {
+    animation-delay: 0.6s;
+}
+
+@keyframes mouthWave {
+    0% { transform: scale(1); opacity: 0.9; }
+    100% { transform: scale(2.1); opacity: 0; }
+}
