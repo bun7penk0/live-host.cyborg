@@ -19,18 +19,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- 1. ระบบลากปาก ---
     function loadPositions() {
-        const saved = localStorage.getItem('mouthPos');
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            posX = parsed.x;
-            posY = parsed.y;
-        } else {
-            // ✅ [แก้ไข] ตำแหน่งเริ่มต้น: ขยับขึ้นให้ตรงปาก
-            posX = 0; 
-            posY = -30; // ค่าลบคือขยับขึ้น (ปรับตัวเลขนี้ได้ตามความเหมาะสม)
-        }
-        updateMouthPosition();
+    const saved = localStorage.getItem('mouthPos');
+    if (saved) {
+        const parsed = JSON.parse(saved);
+        posX = parsed.x;
+        posY = parsed.y;
+    } else {
+        // ✅ ปรับตำแหน่งให้ตรงปากพี่โอม (ลองขยับตัวเลขนี้)
+        posX = -15; // ติดลบ = ขยับไปทางซ้าย
+        posY = -45; // ติดลบ = ขยับขึ้น
     }
+    updateMouthPosition();
+}
+        
+    
+            
+            
+            
+        
+        
+            
+            
+        
+           
     function updateMouthPosition() { mouthPart.style.transform = `translate(${posX}px, ${posY}px)`; }
 
     btnToggleDrag.addEventListener('click', () => {
