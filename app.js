@@ -1,174 +1,77 @@
-document.addEventListener("DOMContentLoaded", () => {
-    const mouthPart = document.getElementById('mouthPart');
-    const mouthShape = document.getElementById('mouthShape');
-    const btnToggleDrag = document.getElementById('btnToggleDrag');
-    const wrapper = document.getElementById('characterWrapper');
-    const scriptInput = document.getElementById('scriptInput');
-    const liveStatus = document.getElementById('liveStatus');
+// server.js (ตัวอย่างโครงสร้าง - ต้องติดตั้ง dependencies เพิ่ม)
+const express = require('express');
+const cors = require('cors');
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// ===== 1. ElevenLabs TTS =====
+app.post('/api/tts', async (req, res) => {
+    const { text } = req.body;
+    const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY; // เก็บใน .env
+    const VOICE_ID = "YOUR_VOICE_ID";
     
-    let isDragMode = false;
-    let isDragging = false;
-    let offsetX = 0, offsetY = 0;
-    let posX = 0, posY = 44; // ตำแหน่งเริ่มต้น
-
-    // --- 1. ระบบลากลำโพง ---
-    function loadPositions() {
-        const saved = localStorage.getItem('mouthPos');
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            posX = parsed.x;
-            posY = parsed.y;
-        }
-        updateMouthPosition();
-    }
-    function updateMouthPosition() { mouthPart.style.transform = `translate(${posX}px, ${posY}px)`; }
-
-    btnToggleDrag.addEventListener('click', () => {
-        isDragMode = !isDragMode;
-        btnToggleDrag.classList.toggle('active', isDragMode);
-        btnToggleDrag.textContent = isDragMode ? "🛑 ปิดโหมดลาก" : "👉 เปิดโหมดลากปาก";
-        mouthPart.style.pointerEvents = isDragMode ? 'auto' : 'none';
-        mouthPart.style.outline = isDragMode ? '2px dashed yellow' : 'none';
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
+        method: 'POST',
+        headers: {
+            'xi-api-key': ELEVENLABS_API_KEY,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            text: text,
+            model_id: "eleven_flash_v2_5", // รองรับไทย, latency ต่ำ [citation:11]
+            voice_settings: { stability: 0.5, similarity_boost: 0.8 }
+        })
     });
-
-    mouthPart.addEventListener('pointerdown', (e) => {
-        if (!isDragMode) return;
-        isDragging = true;
-        const rect = mouthPart.getBoundingClientRect();
-        offsetX = e.clientX - rect.left - (rect.width / 2);
-        offsetY = e.clientY - rect.top - (rect.height / 2);
-        e.preventDefault();
-    });
-
-    window.addEventListener('pointermove', (e) => {
-        if (!isDragging) return;
-        const studioRect = document.getElementById('studioContainer').getBoundingClientRect();
-        posX = (e.clientX - studioRect.left) - (studioRect.width / 2) - offsetX;
-        posY = (e.clientY - studioRect.top) - (studioRect.height / 2) - offsetY;
-        updateMouthPosition();
-    });
-
-    window.addEventListener('pointerup', () => {
-        if (isDragging) { isDragging = false; savePositions(); }
-    });
-
-    window.savePositions = function() {
-        localStorage.setItem('mouthPos', JSON.stringify({ x: posX, y: posY }));
-    };
-    loadPositions();
-
-    // --- 2. ระบบ TTS & Animation ---
-    const synth = window.speechSynthesis;
-    let isSpeaking = false;
-    let talkInterval;
-
-    function startTalkingAnim() {
-        wrapper.classList.add('talking');
-        liveStatus.textContent = "LIVE";
-        liveStatus.style.background = "#f44336";
-        talkInterval = setInterval(() => {
-            const scale = 1 + (Math.random() * 0.3);
-            mouthShape.style.transform = `scale(${scale})`;
-        }, 80);
-    }
-
-    function stopTalkingAnim() {
-        wrapper.classList.remove('talking');
-        liveStatus.textContent = "STANDBY";
-        liveStatus.style.background = "#9e9e9e";
-        clearInterval(talkInterval);
-        mouthShape.style.transform = 'scale(1)';
-        isSpeaking = false;
-    }
-
-    function botSpeak(text) {
-        if (isSpeaking) {
-            synth.cancel(); // หยุดคำพูดเก่า
-            stopTalkingAnim();
-        }
-        isSpeaking = true;
-        startTalkingAnim();
-        addChatBubble("พี่โอม", text, true);
-
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'th-TH';
-        utterance.rate = 1.0;
-        utterance.onend = () => { stopTalkingAnim(); };
-        synth.speak(utterance);
-    }
-
-    document.getElementById('btnTestTalk').addEventListener('click', () => {
-        const text = scriptInput.value.trim();
-        if (text) botSpeak(text);
-    });
-
-    document.getElementById('btnTestBlink').addEventListener('click', () => {
-        wrapper.classList.add('blinking');
-        setTimeout(() => wrapper.classList.remove('blinking'), 150);
-    });
-
-    // --- 3. ระบบแชท & AI Logic ---
-    const chatOverlay = document.getElementById('chatOverlay');
     
-    function addChatBubble(user, text, isBot = false) {
-        const bubble = document.createElement('div');
-        bubble.className = `chat-bubble ${isBot ? 'bot-reply' : ''}`;
-        bubble.innerHTML = `<span class="user-name">${user}:</span> ${text}`;
-        chatOverlay.appendChild(bubble);
-        chatOverlay.scrollTop = chatOverlay.scrollHeight;
-        if (chatOverlay.children.length > 5) chatOverlay.removeChild(chatOverlay.firstChild);
-    }
-
-    window.sendMockChat = function() {
-        const input = document.getElementById('mockChatInput');
-        const text = input.value.trim();
-        if (!text) return;
-
-        addChatBubble("ผู้ชม", text);
-        input.value = '';
-        
-        // หน่วงเวลา 1 วิให้เหมือนกำลังคิด
-        setTimeout(() => processAIResponse(text), 1000);
-    };
-
-    const badWords = ["คำหยาบ1", "คำหยาบ2"]; // เพิ่มคำหยาบที่นี่
-    const knowledgeBase = [
-        { keywords: ["บอล", "ฟุตบอล"], answers: ["เมื่อคืนบาร์เซโลน่าชนะขาดครับ 3-1"] },
-        { keywords: ["สวัสดี", "หวัดดี"], answers: ["สวัสดีครับผม พี่โอม ยินดีที่ได้รู้จักครับ"] },
-        { keywords: ["ชื่อ", "ใคร"], answers: ["ผมชื่อพี่โอม เป็นพิธีกร AI ครับ"] }
-    ];
-
-    function processAIResponse(userText) {
-        if (badWords.some(word => userText.includes(word))) {
-            botSpeak("ขอโทษด้วยครับ พี่โอมไม่ขอตอบคำถามในลักษณะนี้นะครับ");
-            return;
-        }
-
-        let botAnswer = null;
-        for (let item of knowledgeBase) {
-            if (item.keywords.some(kw => userText.includes(kw))) {
-                botAnswer = item.answers[Math.floor(Math.random() * item.answers.length)];
-                break;
-            }
-        }
-
-        if (!botAnswer) {
-            const fallbacks = ["คำถามนี้ยากจังครับ ขอพี่โอมคิดแป๊บนึงนะ", "ยังไม่มีข้อมูลส่วนนี้เลยครับ"];
-            botAnswer = fallbacks[Math.floor(Math.random() * fallbacks.length)];
-        }
-        botSpeak(botAnswer);
-    }
-
-    // --- 4. Standby Mode ---
-    const standbyPrompts = [
-        "ใครมีคำถามพิมพ์ถามพี่โอมได้เลยครับ",
-        "ฝากกดไลก์ กดติดตาม เป็นกำลังใจให้พี่โอมด้วยนะครับ"
-    ];
-
-    setInterval(() => {
-        if (!isSpeaking) {
-            const randomPrompt = standbyPrompts[Math.floor(Math.random() * standbyPrompts.length)];
-            botSpeak(randomPrompt);
-        }
-    }, 15000); // 15 วินาที
+    const audioBuffer = await response.arrayBuffer();
+    res.set('Content-Type', 'audio/mpeg');
+    res.send(Buffer.from(audioBuffer));
 });
+
+// ===== 2. Gemini Chat =====
+app.post('/api/chat', async (req, res) => {
+    const { message } = req.body;
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    
+    const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                system_instruction: {
+                    parts: [{ text: "คุณคือพี่โอม พิธีกร AI ครึ่งคนครึ่งไซบอร์ก ตอบสั้นๆ สุภาพ ห้ามตอบเรื่องการเมือง ศาสนา และคำหยาบ" }]
+                },
+                contents: [{ parts: [{ text: message }] }]
+            })
+        }
+    );
+    
+    const data = await response.json();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "ขอโทษครับ พี่โอมตอบไม่ได้ตอนนี้";
+    res.json({ reply });
+});
+
+// ===== 3. Facebook Live Comments (SSE) =====
+app.get('/api/live-comments/stream', async (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    
+    // ⚠️ ต้องมี Facebook Access Token และ Live Video ID
+    // ใช้ SSE Endpoint: https://streaming-graph.facebook.com/{live-video-id}/live_comments?access_token={token} [citation:3]
+    
+    // ตัวอย่างการ Polling (ทางเลือกถ้า SSE ยาก)
+    // setInterval(async () => {
+    //     const comments = await fetchFacebookComments();
+    //     comments.forEach(c => res.write(`data: ${JSON.stringify(c)}\n\n`));
+    // }, 3000);
+});
+
+// ===== 4. TikTok Live Comments =====
+// ใช้ Library: tiktok-live-connector (npm) [citation:10]
+// หรือ tiktok-live-api (npm) [citation:14]
+// ต้องมี Signing API Key จาก Euler Stream
+
+app.listen(3000, () => console.log('Backend running on port 3000'));
