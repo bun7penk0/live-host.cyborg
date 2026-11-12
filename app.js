@@ -18,20 +18,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- 1. ระบบลากปาก (แก้ใหม่ทั้งหมด) ---
     function loadPositions() {
-        const saved = localStorage.getItem('mouthPos');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                posX = parsed.x;
-                posY = parsed.y;
-            } catch(e) {}
-        } else {
-            // ค่าเริ่มต้นที่ตรงปากพี่โอมที่สุด (จากรูปที่ส่งมา)
-            posX = -8;  // ติดลบ = ไปซ้ายนิดเดียว
-            posY = -12; // ติดลบ = ขึ้นบนนิดเดียว
-        }
-        updateMouthPosition();
-    }
+    // ล้างค่าเก่าที่หล่นลงข้างล่างทิ้งไปเลย
+    localStorage.removeItem('mouthPos');
+    
+    // ค่าใหม่ที่ตรงปากพอดี (จากรูปที่ส่งมา)
+    posX = -8;  // ซ้าย-ขวา
+    posY = -18; // ยิ่งติดลบเยอะ ยิ่งขึ้นบน - อันนี้ขยับขึ้นจากเดิม 6px
+    updateMouthPosition();
+}
+
+function updateMouthPosition() {
+    mouthPart.style.left = `calc(50% + ${posX}px)`;
+    mouthPart.style.top = `calc(62% + ${posY}px)`;
+    mouthPart.style.transform = `translate(-50%, -50%)`;
+}
     
     function updateMouthPosition() {
         // จุดกลางของปาก = 50% ซ้าย, 62% บน + ค่าที่ลาก
