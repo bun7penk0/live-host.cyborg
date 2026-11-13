@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     const BACKEND_URL = "https://cyborg-backend-production.up.railway.app";
 
+    // DOM Elements
     const mouthPart = document.getElementById('mouthPart');
     const btnToggleDrag = document.getElementById('btnToggleDrag');
     const wrapper = document.getElementById('characterWrapper');
@@ -11,17 +12,107 @@ document.addEventListener("DOMContentLoaded", () => {
     const soundWave = document.getElementById('soundWave');
     const mockChatInput = document.getElementById('mockChatInput'); 
     
+    // State
     let isDragMode = false;
     let isDragging = false;
     let posX = 0, posY = -30; 
     let isSpeaking = false;
     let silenceTimer;
-    
-    // 🚀 ระบบคิวคำพูด (Speech Queue)
     let speechQueue = [];
     let isProcessingQueue = false;
 
-    // --- 1. ระบบตำแหน่งปาก ---
+    // ==========================================
+    // 1. ระบบ Matrix Background (Canvas 2D)
+    // ==========================================
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let matrixInterval;
+    let isMatrixOn = true;
+    let matrixSpeed = 50; // ms ต่อเฟรม (ยิ่งน้อยยิ่งเร็ว)
+    
+    // ตัวอักษร Matrix
+    const matrixChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*";
+    const fontSize = 16;
+    let columns, drops;
+
+    function initMatrix() {
+        canvas.width = studioContainer.clientWidth;
+        canvas.height = studioContainer.clientHeight;
+        columns = Math.floor(canvas.width / fontSize);
+        drops = [];
+        for (let i = 0; i < columns; i++) drops[i] = 1;
+    }
+
+    function drawMatrix() {
+        // สีพื้นหลังจางๆ เพื่อให้เกิด Effect หางยาว
+        ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#00E5FF"; // สีฟ้าไซเบอร์
+        ctx.font = `${fontSize}px monospace`;
+
+        for (let i = 0; i < drops.length; i++) {
+            const text = matrixChars[Math.floor(Math.random() * matrixChars.length)];
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+            drops[i]++;
+        }
+    }
+
+    function startMatrix() {
+        initMatrix();
+        matrixInterval = setInterval(drawMatrix, matrixSpeed);
+    }
+
+    // จัดการปุ่ม Matrix
+    const btnMatrixToggle = document.getElementById('btnMatrixToggle');
+    const selectMatrixSpeed = document.getElementById('matrixSpeed');
+
+    btnMatrixToggle.addEventListener('click', () => {
+        isMatrixOn = !isMatrixOn;
+        if (isMatrixOn) {
+            canvas.classList.remove('hidden');
+            btnMatrixToggle.textContent = "เปิด";
+            btnMatrixToggle.classList.add('active');
+            startMatrix();
+        } else {
+            canvas.classList.add('hidden');
+            btnMatrixToggle.textContent = "ปิด";
+            btnMatrixToggle.classList.remove('active');
+            clearInterval(matrixInterval);
+        }
+    });
+
+    selectMatrixSpeed.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val === 'slow') matrixSpeed = 100;
+        if (val === 'normal') matrixSpeed = 50;
+        if (val === 'fast') matrixSpeed = 20;
+        
+        if (isMatrixOn) {
+            clearInterval(matrixInterval);
+            startMatrix();
+        }
+    });
+
+    // เริ่ม Matrix ทันทีที่โหลด
+    startMatrix();
+
+    // ปรับขนาด Canvas เมื่อหน้าจอเปลี่ยน
+    window.addEventListener('resize', () => {
+        if (isMatrixOn) {
+            initMatrix();
+        }
+    });
+
+
+    // ==========================================
+    // 2. ระบบตำแหน่งปาก (เหมือนเดิม)
+    // ==========================================
     function updateMouthPosition() {
         mouthPart.style.left = `calc(50% + ${posX}px)`;
         mouthPart.style.top = `calc(50% + ${posY}px)`;
@@ -73,7 +164,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     loadPositions();
 
-    // --- 2. ระบบอนิเมชัน ---
+    // ==========================================
+    // 3. ระบบอนิเมชัน & คิวคำพูด
+    // ==========================================
     function startTalkingAnim() {
         wrapper.classList.add('talking');
         if (soundWave) soundWave.classList.add('active');
@@ -95,31 +188,22 @@ document.addEventListener("DOMContentLoaded", () => {
         resetSilenceTimer(); 
     }
 
-    // --- 3. ระบบคิวและการพูด ---
-    // ฟังก์ชันเพิ่มคำพูดเข้าคิว
     function enqueueSpeech(text) {
         speechQueue.push(text);
-        if (!isProcessingQueue) {
-            processQueue();
-        }
+        if (!isProcessingQueue) processQueue();
     }
 
-    // ฟังก์ชันประมวลผลคิว
     async function processQueue() {
         if (speechQueue.length === 0) {
             isProcessingQueue = false;
             return;
         }
-
         isProcessingQueue = true;
-        const textToSpeak = speechQueue.shift(); // ดึงคำพูดแรกออกมา
+        const textToSpeak = speechQueue.shift(); 
         await playAudio(textToSpeak);
-        
-        // เมื่อพูดจบ ให้เรียกฟังก์ชันนี้ซ้ำเพื่อพูดคำถัดไป
         processQueue(); 
     }
 
-    // ฟังก์ชันเล่นเสียงจริง
     async function playAudio(text) {
         if (isSpeaking) {
             window.speechSynthesis.cancel();
@@ -146,7 +230,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 audio.onended = () => {
                     stopTalkingAnim();
-                    resolve(); // แจ้งว่าพูดจบแล้ว
+                    resolve(); 
                 };
                 await audio.play();
 
@@ -156,22 +240,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 utterance.lang = 'th-TH';
                 utterance.onend = () => {
                     stopTalkingAnim();
-                    resolve(); // แจ้งว่าพูดจบแล้ว
+                    resolve(); 
                 };
                 window.speechSynthesis.speak(utterance);
             }
         });
     }
 
-    // --- 4. ระบบตอบแชท (Gemini) ---
+    // ==========================================
+    // 4. ระบบตอบแชท (Gemini)
+    // ==========================================
     window.sendMockChat = async function() {
         const text = mockChatInput.value.trim();
         if (!text) return;
         
         addChatBubble("ผู้ชม", text);
         mockChatInput.value = '';
-        
-        clearTimeout(silenceTimer); // หยุด Standby ชั่วคราว
+        clearTimeout(silenceTimer); 
 
         try {
             const response = await fetch(`${BACKEND_URL}/api/chat`, {
@@ -182,8 +267,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (!response.ok) throw new Error("Gemini failed");
             const data = await response.json();
-            
-            // 🚀 ส่งคำตอบเข้าคิว (แทนที่จะพูดทันที)
             enqueueSpeech(data.reply);
 
         } catch (err) {
@@ -191,7 +274,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // --- 5. ระบบแชท UI ---
+    // ==========================================
+    // 5. UI แชท
+    // ==========================================
     function addChatBubble(user, text, isBot = false) {
         const bubble = document.createElement('div');
         bubble.className = `chat-bubble ${isBot ? 'bot-reply' : ''}`;
@@ -212,7 +297,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 5000);
     }
 
-    // --- 6. ปุ่มทดสอบ ---
+    // ==========================================
+    // 6. ปุ่มทดสอบ
+    // ==========================================
     document.getElementById('btnTestTalk')?.addEventListener('click', () => {
         const text = scriptInput.value.trim();
         if (text) enqueueSpeech(text);
@@ -224,7 +311,9 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => wrapper.classList.remove('blinking'), 150);
     });
 
-    // --- 7. Standby Mode ---
+    // ==========================================
+    // 7. Standby Mode
+    // ==========================================
     const standbyPrompts = [
         "สวัสดีครับทุกคน ผมชื่อพี่โอม พิธีกร AI ประจำรายการครับ",
         "ฝากกดไลก์ กดติดตาม เป็นกำลังใจให้พี่โอมด้วยนะครับ",
@@ -241,7 +330,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function resetSilenceTimer() {
         clearTimeout(silenceTimer);
-        // ถ้าคิวว่างอยู่ และไม่ได้กำลังพูด ให้เริ่มนับเวลา Standby
         silenceTimer = setTimeout(() => {
             if (!isSpeaking && !isDragging && speechQueue.length === 0) { 
                 const mealPrompt = checkMealTime();
