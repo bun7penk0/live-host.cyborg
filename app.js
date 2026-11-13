@@ -240,64 +240,156 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ==========================================
-    // 4. ANIMATION & SPEECH PROCESSING
-    // ==========================================
-    function startTalkingAnim() {
-        wrapper.classList.add('talking');
-        if (soundWave) soundWave.classList.add('active');
-        if (liveStatus) { liveStatus.textContent = "LIVE"; liveStatus.style.background = "#f44336"; }
-    }
-    function stopTalkingAnim() {
-        wrapper.classList.remove('talking');
-        if (soundWave) soundWave.classList.remove('active');
-        if (liveStatus) { liveStatus.textContent = "STANDBY"; liveStatus.style.background = "#9e9e9e"; }
-        isSpeaking = false;
-        isProcessingQueue = false; 
-        resetSilenceTimer(); 
-    }
+// 4. ANIMATION & SPEECH PROCESSING (อัปเดต)
+// ==========================================
+function startTalkingAnim() {
+    wrapper.classList.add('talking');
+    if (soundWave) soundWave.classList.add('active');
+    if (liveStatus) { liveStatus.textContent = "LIVE"; liveStatus.style.background = "#f44336"; }
+}
+function stopTalkingAnim() {
+    wrapper.classList.remove('talking');
+    if (soundWave) soundWave.classList.remove('active');
+    if (liveStatus) { liveStatus.textContent = "STANDBY"; liveStatus.style.background = "#9e9e9e"; }
+    isSpeaking = false;
+    isProcessingQueue = false; 
+    resetSilenceTimer(); 
+}
 
-    async function processQueue() {
-        if (speechQueue.length === 0) { 
-            isProcessingQueue = false; 
-            return; 
+// ✅ เพิ่ม: ระบบ Queue Cleanup (ล้างคิวถ้าค้างเกิน 15 วิ)
+let queueStuckTimer;
+function startQueueWatchdog() {
+    clearTimeout(queueStuckTimer);
+    queueStuckTimer = setTimeout(() => {
+        if (isProcessingQueue && isSpeaking) {
+            console.log("⚠️ คิวค้างเกิน 15 วินาที - กำลังล้างคิว");
+            window.speechSynthesis.cancel();
+            speechQueue.clear();
+            isProcessingQueue = false;
+            isSpeaking = false;
+            stopTalkingAnim();
         }
-        isProcessingQueue = true;
-        const item = speechQueue.dequeue();
-        await playAudio(item.text);
-        processQueue(); 
+    }, 15000); // 15 วินาที
+}
+
+async function processQueue() {
+    if (speechQueue.length === 0) { 
+        isProcessingQueue = false; 
+        return; 
     }
+    isProcessingQueue = true;
+    startQueueWatchdog(); // เริ่มจับเวลาคิวค้าง
+    
+    const item = speechQueue.dequeue();
+    await playAudio(item.text);
+    
+    clearTimeout(queueStuckTimer); // ล้าง Timer เมื่อสำเร็จ
+    processQueue(); 
+}
 
-    async function playAudio(text) {
-        if (isSpeaking) { window.speechSynthesis.cancel(); stopTalkingAnim(); }
-        isSpeaking = true;
-        addChatBubble("พี่โอม", text, true);
-        startTalkingAnim();
-        markAsSpoken(text); // 🔥 บันทึกว่าพูดประโยคนี้แล้ว
+// ✅ เพิ่ม: ระบบ Retry + Fallback ที่แข็งแรงขึ้น
+async function playAudio(text, retryCount = 0) {
+    if (isSpeaking) { window.speechSynthesis.cancel(); stopTalkingAnim(); }
+    isSpeaking = true;
+    addChatBubble("พี่โอม", text, true);
+    startTalkingAnim();
+    markAsSpoken(text);
 
-        return new Promise(async (resolve) => {
-            let hasResolved = false;
-            const safeResolve = () => { if (!hasResolved) { hasResolved = true; resolve(); } };
-            const timeoutId = setTimeout(() => { if (!hasResolved) { fallbackWebSpeech(text, safeResolve); } }, 6000);
+    return new Promise(async (resolve) => {
+        let hasResolved = false;
+        const safeResolve = () => { if (!hasResolved) { hasResolved = true; resolve(); } };
+        
+        // ⏱️ Timeout 5 วินาที (ลดจาก 6 เพื่อให้เร็วขึ้น)
+        const timeoutId = setTimeout(() => { 
+            if (!hasResolved) { 
+                console.log(`⏱️ TTS Timeout (ครั้งที่ ${retryCount + 1}) - Fallback`);
+                fallbackWebSpeech(text, safeResolve); 
+            } 
+        }, 5000);
 
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/tts`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text })
-                });
-                if (!response.ok) throw new Error("TTS failed");
-                
-                const audioBlob = await response.blob();
-                const audioUrl = URL.createObjectURL(audioBlob);
-                const audio = new Audio(audioUrl);
-                audio.onended = () => { clearTimeout(timeoutId); stopTalkingAnim(); safeResolve(); };
-                audio.onerror = () => { clearTimeout(timeoutId); fallbackWebSpeech(text, safeResolve); };
-                await audio.play();
-            } catch (err) {
-                clearTimeout(timeoutId); fallbackWebSpeech(text, safeResolve);
+        try {
+            const controller = new AbortController();
+            const fetchTimeout = setTimeout(() => controller.abort(), 5000);
+            
+            const response = await fetch(`${BACKEND_URL}/api/tts`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text }),
+                signal: controller.signal
+            });
+            clearTimeout(fetchTimeout);
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const audioBlob = await response.blob();
+            
+            // ✅ เช็กว่าไฟล์เสียงไม่ว่างเปล่า
+            if (audioBlob.size < 100) {
+                throw new Error("ไฟล์เสียงว่างเปล่า");
             }
-        });
+            
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            
+            audio.onended = () => { 
+                clearTimeout(timeoutId); 
+                URL.revokeObjectURL(audioUrl); // ✅ คืน memory
+                stopTalkingAnim(); 
+                safeResolve(); 
+            };
+            audio.onerror = () => { 
+                clearTimeout(timeoutId); 
+                URL.revokeObjectURL(audioUrl);
+                console.log("Audio Error - Fallback");
+                fallbackWebSpeech(text, safeResolve); 
+            };
+            
+            await audio.play();
+            
+        } catch (err) {
+            clearTimeout(timeoutId);
+            console.log(`❌ TTS Error: ${err.message} - Fallback to Web Speech`);
+            fallbackWebSpeech(text, safeResolve);
+        }
+    });
+}
+
+function fallbackWebSpeech(text, callback) {
+    if ('speechSynthesis' in window) {
+        // ✅ ยกเลิกเสียงเก่าก่อน
+        window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'th-TH';
+        utterance.rate = 1.0;
+        
+        utterance.onend = () => { stopTalkingAnim(); if (callback) callback(); };
+        utterance.onerror = () => { stopTalkingAnim(); if (callback) callback(); };
+        window.speechSynthesis.speak(utterance);
+    } else {
+        stopTalkingAnim();
+        if (callback) callback();
     }
+}
+
+// ✅ เพิ่ม: Keep-Alive Ping (ปลุก Backend ทุก 30 วิ)
+setInterval(() => {
+    fetch(`${BACKEND_URL}/`, { method: 'GET' })
+        .then(() => console.log("💓 Keep-Alive OK"))
+        .catch(() => console.log("💔 Backend ไม่ตอบสนอง"));
+}, 30000); // 30 วินาที
+
+// ✅ เพิ่ม: Auto-Recover เมื่อกลับเข้าหน้าเว็บ (Visibility API)
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        console.log("🔄 กลับเข้าหน้าเว็บ - รีเซ็ตระบบ");
+        // รีเซ็ตระบบเสียงเมื่อกลับมา
+        window.speechSynthesis.cancel();
+        isSpeaking = false;
+        isProcessingQueue = false;
+        resetSilenceTimer();
+    }
+});
 
     function fallbackWebSpeech(text, callback) {
         if ('speechSynthesis' in window) {
