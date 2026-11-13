@@ -338,9 +338,135 @@ async function playAudio(text, retryCount = 0) {
                 safeResolve(); 
             };
             audio.onerror = () => { 
+// ==========================================
+// 4. ANIMATION & SPEECH PROCESSING (แก้ Rate Limit)
+// ==========================================
+function startTalkingAnim() {
+    wrapper.classList.add('talking');
+    if (soundWave) soundWave.classList.add('active');
+    if (liveStatus) { liveStatus.textContent = "LIVE"; liveStatus.style.background = "#f44336"; }
+}
+function stopTalkingAnim() {
+    wrapper.classList.remove('talking');
+    if (soundWave) soundWave.classList.remove('active');
+    if (liveStatus) { liveStatus.textContent = "STANDBY"; liveStatus.style.background = "#9e9e9e"; }
+    isSpeaking = false;
+    isProcessingQueue = false; 
+    resetSilenceTimer(); 
+}
+
+// 🔥 Rate Limiter สำหรับ ElevenLabs (3 ครั้ง/นาที)
+let elevenLabsCallTimes = [];
+const ELEVENLABS_RATE_LIMIT = 3; // 3 ครั้ง
+const RATE_WINDOW = 60000; // ต่อ 60 วินาที
+
+function canCallElevenLabs() {
+    const now = Date.now();
+    // ล้างเวลาที่เก่าเกิน 1 นาทีออก
+    elevenLabsCallTimes = elevenLabsCallTimes.filter(t => (now - t) < RATE_WINDOW);
+    
+    if (elevenLabsCallTimes.length >= ELEVENLABS_RATE_LIMIT) {
+        console.log(`⚠️ ElevenLabs Rate Limit (${elevenLabsCallTimes.length}/3) - ใช้ Web Speech แทน`);
+        return false;
+    }
+    elevenLabsCallTimes.push(now);
+    return true;
+}
+
+// Queue Watchdog (ล้างคิวถ้าค้างเกิน 10 วิ)
+let queueStuckTimer;
+function startQueueWatchdog() {
+    clearTimeout(queueStuckTimer);
+    queueStuckTimer = setTimeout(() => {
+        if (isProcessingQueue && isSpeaking) {
+            console.log("⚠️ คิวค้างเกิน 10 วินาที - กำลังล้างคิว");
+            window.speechSynthesis.cancel();
+            speechQueue.clear();
+            isProcessingQueue = false;
+            isSpeaking = false;
+            stopTalkingAnim();
+        }
+    }, 10000);
+}
+
+async function processQueue() {
+    if (speechQueue.length === 0) { 
+        isProcessingQueue = false; 
+        return; 
+    }
+    isProcessingQueue = true;
+    startQueueWatchdog();
+    
+    const item = speechQueue.dequeue();
+    await playAudio(item.text);
+    
+    clearTimeout(queueStuckTimer);
+    processQueue(); 
+}
+
+async function playAudio(text) {
+    if (isSpeaking) { window.speechSynthesis.cancel(); stopTalkingAnim(); }
+    isSpeaking = true;
+    addChatBubble("พี่โอม", text, true);
+    startTalkingAnim();
+    markAsSpoken(text);
+
+    return new Promise(async (resolve) => {
+        let hasResolved = false;
+        const safeResolve = () => { if (!hasResolved) { hasResolved = true; resolve(); } };
+
+        // 🔥 เช็ก Rate Limit ก่อน
+        if (!canCallElevenLabs()) {
+            // ถ้าใช้ครบ 3 ครั้งแล้ว ให้ใช้ Web Speech ทันที
+            fallbackWebSpeech(text, safeResolve);
+            return;
+        }
+
+        // ⏱️ Timeout 4 วินาที (เร็วขึ้น)
+        const timeoutId = setTimeout(() => { 
+            if (!hasResolved) { 
+                console.log("⏱️ TTS Timeout - Fallback");
+                fallbackWebSpeech(text, safeResolve); 
+            } 
+        }, 4000);
+
+        try {
+            const controller = new AbortController();
+            const fetchTimeout = setTimeout(() => controller.abort(), 4000);
+            
+            const response = await fetch(`${BACKEND_URL}/api/tts`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text }),
+                signal: controller.signal
+            });
+            clearTimeout(fetchTimeout);
+            
+            // 🔥 ถ้าเจอ 429 (Too Many Requests) ให้ใช้ Web Speech
+            if (response.status === 429) {
+                console.log("⚠️ ElevenLabs 429 Too Many Requests - ใช้ Web Speech");
+                clearTimeout(timeoutId);
+                fallbackWebSpeech(text, safeResolve);
+                return;
+            }
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const audioBlob = await response.blob();
+            if (audioBlob.size < 100) throw new Error("ไฟล์เสียงว่างเปล่า");
+            
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            
+            audio.onended = () => { 
                 clearTimeout(timeoutId); 
                 URL.revokeObjectURL(audioUrl);
-                console.log("Audio Error - Fallback");
+                stopTalkingAnim(); 
+                safeResolve(); 
+            };
+            audio.onerror = () => { 
+                clearTimeout(timeoutId); 
+                URL.revokeObjectURL(audioUrl);
                 fallbackWebSpeech(text, safeResolve); 
             };
             
@@ -348,7 +474,7 @@ async function playAudio(text, retryCount = 0) {
             
         } catch (err) {
             clearTimeout(timeoutId);
-            console.log(`❌ TTS Error: ${err.message} - Fallback to Web Speech`);
+            console.log(`❌ TTS Error: ${err.message} - Fallback`);
             fallbackWebSpeech(text, safeResolve);
         }
     });
@@ -356,12 +482,16 @@ async function playAudio(text, retryCount = 0) {
 
 function fallbackWebSpeech(text, callback) {
     if ('speechSynthesis' in window) {
-        // ✅ ยกเลิกเสียงเก่าก่อน
         window.speechSynthesis.cancel();
         
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'th-TH';
         utterance.rate = 1.0;
+        
+        // 🔥 หาเสียงภาษาไทยในเครื่อง
+        const voices = window.speechSynthesis.getVoices();
+        const thaiVoice = voices.find(v => v.lang.includes('th'));
+        if (thaiVoice) utterance.voice = thaiVoice;
         
         utterance.onend = () => { stopTalkingAnim(); if (callback) callback(); };
         utterance.onerror = () => { stopTalkingAnim(); if (callback) callback(); };
