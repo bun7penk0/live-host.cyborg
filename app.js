@@ -1,8 +1,57 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const BACKEND_URL = "https://cyborg-backend-production.up.railway.app";
+    // ==========================================
+    // 0. API KEYS (เก็บใน sessionStorage)
+    // ==========================================
+    let GEMINI_KEY = sessionStorage.getItem('geminiKey') || '';
+    let ELEVENLABS_KEY = sessionStorage.getItem('elevenLabsKey') || '';
+    const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+
+    // ตรวจสอบว่ามี Key หรือยัง ถ้าไม่มีให้แสดงหน้าตั้งค่า
+    const apiSettings = document.getElementById('apiSettings');
+    function checkKeys() {
+        if (!GEMINI_KEY || !ELEVENLABS_KEY) {
+            apiSettings.classList.remove('hidden');
+        } else {
+            apiSettings.classList.add('hidden');
+        }
+    }
+    checkKeys();
+
+    // ปุ่มบันทึก Key
+    document.getElementById('btnSaveKeys').addEventListener('click', () => {
+        const gemini = document.getElementById('geminiKeyInput').value.trim();
+        const eleven = document.getElementById('elevenLabsKeyInput').value.trim();
+        
+        if (!gemini || !eleven) {
+            alert("กรุณากรอก API Key ให้ครบทั้ง 2 ช่องครับ");
+            return;
+        }
+        
+        GEMINI_KEY = gemini;
+        ELEVENLABS_KEY = eleven;
+        sessionStorage.setItem('geminiKey', gemini);
+        sessionStorage.setItem('elevenLabsKey', eleven);
+        
+        apiSettings.classList.add('hidden');
+        alert("✅ บันทึก Key เรียบร้อย! เริ่มใช้งานได้เลย");
+    });
+
+    // ปุ่มลบ Key
+    document.getElementById('btnClearKeys').addEventListener('click', () => {
+        if (confirm("ลบ API Key ทั้งหมดใช่ไหมครับ?")) {
+            sessionStorage.removeItem('geminiKey');
+            sessionStorage.removeItem('elevenLabsKey');
+            GEMINI_KEY = '';
+            ELEVENLABS_KEY = '';
+            document.getElementById('geminiKeyInput').value = '';
+            document.getElementById('elevenLabsKeyInput').value = '';
+            alert("🗑️ ลบ Key เรียบร้อย (จะกลับมาใหม่เมื่อกรอกอีกครั้ง)");
+            checkKeys();
+        }
+    });
 
     // ==========================================
-    // DOM Elements & State
+    // 1. DOM Elements
     // ==========================================
     const mouthPart = document.getElementById('mouthPart');
     const btnToggleDrag = document.getElementById('btnToggleDrag');
@@ -14,26 +63,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const soundWave = document.getElementById('soundWave');
     const mockChatInput = document.getElementById('mockChatInput'); 
     
-    let isDragMode = false;
-    let isDragging = false;
-    let posX = 0, posY = -30; 
-    let isSpeaking = false;
-    let isProcessingQueue = false;
+    let isDragMode = false, isDragging = false, posX = 0, posY = -30;
+    let isSpeaking = false, isProcessingQueue = false;
 
     // ==========================================
-    // 0. Audio Unlock (ปลดล็อกเสียงเบราว์เซอร์)
+    // 2. Audio Unlock
     // ==========================================
     let audioUnlocked = false;
     function unlockAudio() {
         if (audioUnlocked) return;
-        const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
-        silentAudio.play().then(() => { audioUnlocked = true; }).catch(() => {});
+        const s = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+        s.play().then(() => audioUnlocked = true).catch(() => {});
     }
     document.body.addEventListener('click', unlockAudio, { once: true });
     document.body.addEventListener('touchstart', unlockAudio, { once: true });
 
     // ==========================================
-    // 1. Matrix Background
+    // 3. Matrix (ย่อ)
     // ==========================================
     const canvas = document.getElementById('matrixCanvas');
     const ctx = canvas.getContext('2d');
@@ -41,70 +87,44 @@ document.addEventListener("DOMContentLoaded", () => {
     const matrixChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*";
     const fontSize = 16;
     let columns, drops;
-
+    
     function initMatrix() {
-        if (!canvas || !studioContainer) return;
         canvas.width = studioContainer.clientWidth;
         canvas.height = studioContainer.clientHeight;
         columns = Math.floor(canvas.width / fontSize);
-        drops = [];
-        for (let i = 0; i < columns; i++) drops[i] = 1;
+        drops = Array(columns).fill(1);
     }
     function drawMatrix() {
-        if (!ctx) return;
-        ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+        ctx.fillStyle = "rgba(0,0,0,0.05)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#00E5FF";
         ctx.font = `${fontSize}px monospace`;
         for (let i = 0; i < drops.length; i++) {
-            const text = matrixChars[Math.floor(Math.random() * matrixChars.length)];
-            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+            ctx.fillText(matrixChars[Math.floor(Math.random()*matrixChars.length)], i*fontSize, drops[i]*fontSize);
+            if (drops[i]*fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
             drops[i]++;
         }
     }
     function startMatrix() { initMatrix(); matrixInterval = setInterval(drawMatrix, matrixSpeed); }
     
-    const btnMatrixToggle = document.getElementById('btnMatrixToggle');
-    const selectMatrixSpeed = document.getElementById('matrixSpeed');
-    btnMatrixToggle?.addEventListener('click', () => {
+    document.getElementById('btnMatrixToggle')?.addEventListener('click', () => {
         isMatrixOn = !isMatrixOn;
-        if (isMatrixOn) {
-            canvas.classList.remove('hidden');
-            btnMatrixToggle.textContent = "เปิด";
-            btnMatrixToggle.classList.add('active');
-            startMatrix();
-        } else {
-            canvas.classList.add('hidden');
-            btnMatrixToggle.textContent = "ปิด";
-            btnMatrixToggle.classList.remove('active');
-            clearInterval(matrixInterval);
-        }
-    });
-    selectMatrixSpeed?.addEventListener('change', (e) => {
-        const val = e.target.value;
-        if (val === 'slow') matrixSpeed = 100;
-        if (val === 'normal') matrixSpeed = 50;
-        if (val === 'fast') matrixSpeed = 20;
-        if (isMatrixOn) { clearInterval(matrixInterval); startMatrix(); }
+        canvas.classList.toggle('hidden', !isMatrixOn);
+        if (isMatrixOn) startMatrix(); else clearInterval(matrixInterval);
     });
     startMatrix();
-    window.addEventListener('resize', () => { if (isMatrixOn) initMatrix(); });
 
     // ==========================================
-    // 2. Mouth Position (ตำแหน่งปาก)
+    // 4. Mouth Position
     // ==========================================
     function updateMouthPosition() {
         mouthPart.style.left = `calc(50% + ${posX}px)`;
         mouthPart.style.top = `calc(50% + ${posY}px)`;
-        mouthPart.style.transform = `translate(-50%, -50%)`;
+        mouthPart.style.transform = `translate(-50%,-50%)`;
     }
     function loadPositions() {
         const saved = localStorage.getItem('mouthPos');
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            posX = parsed.x; posY = parsed.y;
-        }
+        if (saved) { const p = JSON.parse(saved); posX = p.x; posY = p.y; }
         updateMouthPosition();
     }
     function savePositions() { localStorage.setItem('mouthPos', JSON.stringify({ x: posX, y: posY })); }
@@ -113,7 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btnToggleDrag?.addEventListener('click', () => {
         isDragMode = !isDragMode;
         btnToggleDrag.classList.toggle('active', isDragMode);
-        btnToggleDrag.textContent = isDragMode ? "🛑 ปิดโหมดลาก (บันทึก)" : "👉 เปิดโหมดลากปาก";
+        btnToggleDrag.textContent = isDragMode ? "🛑 ปิดโหมดลาก" : "👉 เปิดโหมดลากปาก";
         mouthPart.style.pointerEvents = isDragMode ? 'auto' : 'none';
         mouthPart.style.outline = isDragMode ? '2px dashed yellow' : 'none';
         if (!isDragMode) savePositions();
@@ -122,13 +142,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!isDragMode) return;
         isDragging = true;
         mouthPart.setPointerCapture(e.pointerId);
-        e.preventDefault();
     });
     mouthPart?.addEventListener('pointermove', (e) => {
         if (!isDragging) return;
-        const rect = studioContainer.getBoundingClientRect();
-        posX = (e.clientX - rect.left) - (rect.width / 2);
-        posY = (e.clientY - rect.top) - (rect.height / 2);
+        const r = studioContainer.getBoundingClientRect();
+        posX = (e.clientX - r.left) - (r.width / 2);
+        posY = (e.clientY - r.top) - (r.height / 2);
         updateMouthPosition();
     });
     mouthPart?.addEventListener('pointerup', () => {
@@ -137,45 +156,61 @@ document.addEventListener("DOMContentLoaded", () => {
     loadPositions();
 
     // ==========================================
-    // 3. Priority Queue & Duplicate Window
+    // 5. 🔥 AI APIs (Direct Call - ไม่ใช้ Backend)
     // ==========================================
-    class PriorityQueue {
-        constructor() { this.items = []; }
-        enqueue(text, priority, category) {
-            this.items.push({ text, priority, category, addedAt: Date.now() });
-            this.items.sort((a, b) => a.priority - b.priority);
+    
+    // เรียก Gemini โดยตรง
+    async function callGemini(userMessage) {
+        try {
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        system_instruction: {
+                            parts: [{ text: "คุณคือพี่โอม พิธีกร AI ครึ่งคนครึ่งไซบอร์ก ให้ตอบสั้นๆ สุภาพ เป็นกันเอง" }]
+                        },
+                        contents: [{ parts: [{ text: userMessage }] }]
+                    })
+                }
+            );
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+            return data.candidates[0].content.parts[0].text;
+        } catch (err) {
+            console.error("Gemini Error:", err);
+            return "ขอโทษครับ พี่โอมคิดไม่ออกตอนนี้";
         }
-        dequeue() { return this.items.shift(); }
-        get length() { return this.items.length; }
-        clear() { this.items = []; }
-    }
-    const speechQueue = new PriorityQueue();
-
-    const DUPLICATE_WINDOW_MS = 10 * 60 * 1000;
-    let spokenHistory = JSON.parse(localStorage.getItem('spokenHistory') || '[]');
-
-    function wasRecentlySpoken(text) {
-        const now = Date.now();
-        spokenHistory = spokenHistory.filter(item => (now - item.spokenAt) < DUPLICATE_WINDOW_MS);
-        return spokenHistory.some(item => item.text === text);
-    }
-    function markAsSpoken(text) {
-        spokenHistory.push({ text, spokenAt: Date.now() });
-        localStorage.setItem('spokenHistory', JSON.stringify(spokenHistory));
     }
 
-    const categoryCooldowns = { greeting: 0, like: 0, follow: 0, thanks: 0, dailyLife: 0, encouragement: 0, conversation: 0, humor: 0, night: 0, farewell: 0 };
-    const CATEGORY_COOLDOWN_MS = { greeting: 3*60*1000, like: 5*60*1000, follow: 8*60*1000, thanks: 10*60*1000, dailyLife: 5*60*1000, encouragement: 10*60*1000, conversation: 5*60*1000, humor: 8*60*1000, night: 5*60*1000, farewell: 10*60*1000 };
-
-    function canUseCategory(category) {
-        const now = Date.now();
-        if (now - categoryCooldowns[category] < CATEGORY_COOLDOWN_MS[category]) return false;
-        categoryCooldowns[category] = now;
-        return true;
+    // เรียก ElevenLabs โดยตรง
+    async function callElevenLabs(text) {
+        try {
+            const response = await fetch(
+                `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'xi-api-key': ELEVENLABS_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        model_id: "eleven_multilingual_v2"
+                    })
+                }
+            );
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return await response.blob();
+        } catch (err) {
+            console.error("ElevenLabs Error:", err);
+            return null;
+        }
     }
 
     // ==========================================
-    // 4. Speech Processing (ระบบเสียงหลัก)
+    // 6. Speech Processing
     // ==========================================
     function startTalkingAnim() {
         wrapper.classList.add('talking');
@@ -187,154 +222,93 @@ document.addEventListener("DOMContentLoaded", () => {
         if (soundWave) soundWave.classList.remove('active');
         if (liveStatus) { liveStatus.textContent = "STANDBY"; liveStatus.style.background = "#9e9e9e"; }
         isSpeaking = false;
-        isProcessingQueue = false; 
-        resetSilenceTimer(); 
+        isProcessingQueue = false;
+        resetSilenceTimer();
     }
 
-    let elevenLabsCallTimes = [];
-    function canCallElevenLabs() {
+    let elevenCalls = [];
+    function canUseElevenLabs() {
         const now = Date.now();
-        elevenLabsCallTimes = elevenLabsCallTimes.filter(t => (now - t) < 60000); // 60 วิ
-        if (elevenLabsCallTimes.length >= 3) return false; // 3 ครั้ง/นาที
-        elevenLabsCallTimes.push(now);
+        elevenCalls = elevenCalls.filter(t => (now - t) < 60000);
+        if (elevenCalls.length >= 3) return false;
+        elevenCalls.push(now);
         return true;
     }
 
-    let queueStuckTimer;
-    function startQueueWatchdog() {
-        clearTimeout(queueStuckTimer);
-        queueStuckTimer = setTimeout(() => {
-            if (isProcessingQueue && isSpeaking) {
-                console.log("⚠️ คิวค้าง - ล้างคิว");
-                window.speechSynthesis.cancel();
-                speechQueue.clear();
-                isProcessingQueue = false;
-                isSpeaking = false;
-                stopTalkingAnim();
-            }
-        }, 10000); // 10 วิ
+    async function playAudio(text) {
+        if (isSpeaking) window.speechSynthesis.cancel();
+        isSpeaking = true;
+        addChatBubble("พี่โอม", text, true);
+        startTalkingAnim();
+
+        // ถ้าไม่มี Key หรือใช้ครบ 3 ครั้ง ให้ Web Speech
+        if (!ELEVENLABS_KEY || !canUseElevenLabs()) {
+            return new Promise((resolve) => fallbackWebSpeech(text, resolve));
+        }
+
+        const blob = await callElevenLabs(text);
+        if (!blob) return new Promise((resolve) => fallbackWebSpeech(text, resolve));
+
+        return new Promise((resolve) => {
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            audio.onended = () => { URL.revokeObjectURL(url); stopTalkingAnim(); resolve(); };
+            audio.onerror = () => { URL.revokeObjectURL(url); fallbackWebSpeech(text, resolve); };
+            audio.play().catch(() => fallbackWebSpeech(text, resolve));
+        });
+    }
+
+    function fallbackWebSpeech(text, resolve) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'th-TH';
+            u.onend = () => { stopTalkingAnim(); resolve(); };
+            u.onerror = () => { stopTalkingAnim(); resolve(); };
+            window.speechSynthesis.speak(u);
+        } else {
+            stopTalkingAnim();
+            resolve();
+        }
     }
 
     async function processQueue() {
         if (speechQueue.length === 0) { isProcessingQueue = false; return; }
         isProcessingQueue = true;
-        startQueueWatchdog();
-        
         const item = speechQueue.dequeue();
         await playAudio(item.text);
-        
-        clearTimeout(queueStuckTimer);
-        processQueue(); 
-    }
-
-    async function playAudio(text) {
-        if (isSpeaking) { window.speechSynthesis.cancel(); stopTalkingAnim(); }
-        isSpeaking = true;
-        addChatBubble("พี่โอม", text, true);
-        startTalkingAnim();
-        markAsSpoken(text);
-
-        return new Promise(async (resolve) => {
-            let hasResolved = false;
-            const safeResolve = () => { if (!hasResolved) { hasResolved = true; resolve(); } };
-
-            if (!canCallElevenLabs()) {
-                console.log("⚠️ Rate Limit - ใช้ Web Speech แทน");
-                fallbackWebSpeech(text, safeResolve);
-                return;
-            }
-
-            const timeoutId = setTimeout(() => { 
-                if (!hasResolved) fallbackWebSpeech(text, safeResolve); 
-            }, 4000);
-
-            try {
-                const controller = new AbortController();
-                const fetchTimeout = setTimeout(() => controller.abort(), 4000);
-                
-                const response = await fetch(`${BACKEND_URL}/api/tts`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text }),
-                    signal: controller.signal
-                });
-                clearTimeout(fetchTimeout);
-                
-                if (response.status === 429) {
-                    clearTimeout(timeoutId);
-                    fallbackWebSpeech(text, safeResolve);
-                    return;
-                }
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                
-                const audioBlob = await response.blob();
-                if (audioBlob.size < 100) throw new Error("ไฟล์เสียงว่างเปล่า");
-                
-                const audioUrl = URL.createObjectURL(audioBlob);
-                const audio = new Audio(audioUrl);
-                
-                audio.onended = () => { 
-                    clearTimeout(timeoutId); 
-                    URL.revokeObjectURL(audioUrl);
-                    stopTalkingAnim(); 
-                    safeResolve(); 
-                };
-                audio.onerror = () => { 
-                    clearTimeout(timeoutId); 
-                    URL.revokeObjectURL(audioUrl);
-                    fallbackWebSpeech(text, safeResolve); 
-                };
-                await audio.play();
-            } catch (err) {
-                clearTimeout(timeoutId);
-                fallbackWebSpeech(text, safeResolve);
-            }
-        });
-    }
-
-    function fallbackWebSpeech(text, callback) {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'th-TH';
-            utterance.onend = () => { stopTalkingAnim(); if (callback) callback(); };
-            utterance.onerror = () => { stopTalkingAnim(); if (callback) callback(); };
-            window.speechSynthesis.speak(utterance);
-        } else {
-            stopTalkingAnim();
-            if (callback) callback();
-        }
+        processQueue();
     }
 
     // ==========================================
-    // 5. Chat & UI
+    // 7. Priority Queue
+    // ==========================================
+    class PriorityQueue {
+        constructor() { this.items = []; }
+        enqueue(text, priority) {
+            this.items.push({ text, priority });
+            this.items.sort((a, b) => a.priority - b.priority);
+        }
+        dequeue() { return this.items.shift(); }
+        get length() { return this.items.length; }
+        clear() { this.items = []; }
+    }
+    const speechQueue = new PriorityQueue();
+
+    // ==========================================
+    // 8. Chat
     // ==========================================
     window.sendMockChat = async function() {
         const text = mockChatInput.value.trim();
         if (!text) return;
-        
         addChatBubble("ผู้ชม", text);
         mockChatInput.value = '';
         clearTimeout(silenceTimer);
-        lastConversationTime = Date.now(); // อัปเดตเวลาคุย
+        lastConversationTime = Date.now();
 
-        try {
-            const response = await fetch(`${BACKEND_URL}/api/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
-            });
-            if (!response.ok) throw new Error("Gemini failed");
-            const data = await response.json();
-            
-            speechQueue.enqueue(data.reply, 1, 'conversation');
-            if (!isProcessingQueue) processQueue();
-            
-        } catch (err) {
-            console.log("Gemini Error", err);
-            speechQueue.enqueue("ขอโทษครับ พี่โอมคิดช้าไปนิดนึง", 1, 'conversation');
-            if (!isProcessingQueue) processQueue();
-        }
+        const reply = await callGemini(text);
+        speechQueue.enqueue(reply, 1);
+        if (!isProcessingQueue) processQueue();
     };
 
     function addChatBubble(user, text, isBot = false) {
@@ -354,96 +328,49 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ==========================================
-    // 6. Speech Library & Time Engine
+    // 9. Speech Library (ย่อ)
     // ==========================================
     const speechLibrary = {
-        greeting: ["สวัสดีครับทุกคน ยินดีต้อนรับเข้าสู่ไลฟ์ครับ", "แวะเข้ามาทักทายกันได้นะครับ", "วันนี้เป็นอย่างไรกันบ้างครับ", "ใครเพิ่งเข้ามาใหม่ ยินดีต้อนรับครับ", "เข้ามานั่งเล่นด้วยกันก่อนได้นะครับ"],
-        like: ["ฝากกดไลก์ให้กันหน่อยนะครับ", "กดหัวใจคนละดวงเป็นกำลังใจนะครับ", "กดไลก์หกเจ็ดตามด้วยนะครับ", "ขอบคุณทุกหัวใจที่ส่งมาให้ครับ"],
-        follow: ["ฝากกดติดตามกันไว้ด้วยนะครับ", "จะได้กลับมาพบกันอีกในไลฟ์หน้าครับ", "ขอบคุณทุกคนที่ติดตามกันครับ"],
-        dailyLife: ["วันนี้กินข้าวกันหรือยังครับ", "มื้อกลางวันกินอะไรกันครับ", "วันนี้ทำงานเหนื่อยไหมครับ", "อย่าลืมดูแลสุขภาพกันนะครับ"],
-        encouragement: ["ทำงานให้มีความสุขนะครับ", "เหนื่อยก็พักได้ครับ อย่าลืมดูแลตัวเอง", "ขอให้วันนี้เป็นวันที่ดีของทุกคนครับ"],
-        conversation: ["วันนี้อยากคุยเรื่องอะไรกันครับ", "ใครมีเรื่องสนุก ๆ มาแบ่งปันกันบ้างครับ", "ทุกคนคิดอย่างไรกับเรื่องนี้ครับ"],
-        humor: ["เงียบแบบนี้สงสัยกำลังแอบฟังกันอยู่แน่เลยครับ", "วันนี้ใครยิ้มแล้วบ้างครับ", "ไลก์ไม่ต้องเยอะ ขอให้กดด้วยใจก็พอครับ"],
-        thanks: ["ขอบคุณสำหรับทุกกำลังใจครับ", "ขอบคุณที่เข้ามาพูดคุยกันนะครับ", "ขอบคุณสำหรับหัวใจครับ"],
-        night: ["ดึกแล้วอย่าลืมพักผ่อนนะครับ", "ขอให้คืนนี้เป็นคืนที่ดีครับ", "หลับฝันดีนะครับทุกคน"],
-        farewell: ["ขอบคุณทุกคนที่อยู่ด้วยกันวันนี้ครับ", "แล้วพบกันใหม่ในไลฟ์หน้าครับ", "ราตรีสวัสดิ์ครับทุกคน"]
+        greeting: ["สวัสดีครับทุกคน ยินดีต้อนรับเข้าสู่ไลฟ์ครับ", "แวะเข้ามาทักทายกันได้นะครับ", "วันนี้เป็นอย่างไรกันบ้างครับ"],
+        like: ["ฝากกดไลก์ให้กันหน่อยนะครับ", "กดหัวใจคนละดวงเป็นกำลังใจนะครับ", "กดไลก์หกเจ็ดตามด้วยนะครับ"],
+        follow: ["ฝากกดติดตามกันไว้ด้วยนะครับ", "ขอบคุณทุกคนที่ติดตามกันครับ"],
+        conversation: ["วันนี้อยากคุยเรื่องอะไรกันครับ", "ทุกคนคิดอย่างไรกับเรื่องนี้ครับ"],
+        humor: ["เงียบแบบนี้สงสัยกำลังแอบฟังกันอยู่แน่เลยครับ", "วันนี้ใครยิ้มแล้วบ้างครับ"],
+        night: ["ดึกแล้วอย่าลืมพักผ่อนนะครับ", "หลับฝันดีนะครับทุกคน"],
+        thanks: ["ขอบคุณสำหรับทุกกำลังใจครับ", "ขอบคุณที่เข้ามาพูดคุยกันนะครับ"]
     };
-
-    function getTimeBasedCategory() {
-        const now = new Date();
-        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-        const thaiTime = new Date(utc + (3600000 * 7));
-        const h = thaiTime.getHours();
-        const m = thaiTime.getMinutes();
-        const t = h * 60 + m;
-
-        if (t >= 300 && t < 540) return { category: "dailyLife", label: "MORNING" };
-        if (t >= 540 && t < 690) return { category: "encouragement", label: "WORKING" };
-        if (t >= 690 && t < 810) return { category: "dailyLife", label: "LUNCH" };
-        if (t >= 810 && t < 1020) return { category: "conversation", label: "AFTERNOON" };
-        if (t >= 1020 && t < 1170) return { category: "encouragement", label: "EVENING" };
-        if (t >= 1170 && t < 1320) return { category: "conversation", label: "PRIME TIME" };
-        return { category: "night", label: "NIGHT" };
-    }
 
     function getRandomSpeech(category) {
         const list = speechLibrary[category];
         if (!list) return null;
-        const available = list.filter(s => !wasRecentlySpoken(s));
-        if (available.length === 0) return null;
-        return available[Math.floor(Math.random() * available.length)];
-    }
-
-    function decideNextSpeech() {
-        if (!localStorage.getItem('hasSpokenWelcome')) {
-            localStorage.setItem('hasSpokenWelcome', 'true');
-            const greeting = getRandomSpeech('greeting');
-            if (greeting) return { text: greeting, priority: 3 };
-        }
-        
-        const timeCat = getTimeBasedCategory();
-        if (canUseCategory(timeCat.category)) {
-            const speech = getRandomSpeech(timeCat.category);
-            if (speech) return { text: speech, priority: 5 };
-        }
-        if (canUseCategory('like')) {
-            const speech = getRandomSpeech('like');
-            if (speech) return { text: speech, priority: 6 };
-        }
-        if (canUseCategory('conversation')) {
-            const speech = getRandomSpeech('conversation');
-            if (speech) return { text: speech, priority: 4 };
-        }
-        return null;
+        return list[Math.floor(Math.random() * list.length)];
     }
 
     // ==========================================
-    // 7. Dynamic Standby Timer
+    // 10. Standby Timer
     // ==========================================
     let silenceTimer;
     let lastConversationTime = 0;
-    const DYNAMIC_DELAYS = [7000, 15000, 20000, 30000];
-
-    function getRandomDelay() {
-        const timeSinceConversation = Date.now() - lastConversationTime;
-        if (timeSinceConversation < 30000) return 30000;
-        if (timeSinceConversation > 120000) return 7000;
-        return DYNAMIC_DELAYS[Math.floor(Math.random() * DYNAMIC_DELAYS.length)];
-    }
+    const DELAYS = [7000, 15000, 20000, 30000];
 
     function resetSilenceTimer() {
         clearTimeout(silenceTimer);
-        const delay = getRandomDelay();
-        console.log(`⏱️ พี่โอมจะพูดในอีก ${(delay/1000).toFixed(1)} วินาที`);
+        if (isSpeaking || isDragging) return;
         
+        const since = Date.now() - lastConversationTime;
+        let delay;
+        if (since < 30000) delay = 30000;
+        else if (since > 120000) delay = 7000;
+        else delay = DELAYS[Math.floor(Math.random() * DELAYS.length)];
+
         silenceTimer = setTimeout(() => {
-            if (!isSpeaking && !isDragging && speechQueue.length === 0) { 
-                const decision = decideNextSpeech();
-                if (decision) {
-                    speechQueue.enqueue(decision.text, decision.priority, 'auto');
+            if (!isSpeaking && !isDragging && speechQueue.length === 0) {
+                const categories = ['greeting', 'like', 'follow', 'conversation', 'humor', 'night'];
+                const cat = categories[Math.floor(Math.random() * categories.length)];
+                const speech = getRandomSpeech(cat);
+                if (speech) {
+                    speechQueue.enqueue(speech, 5);
                     if (!isProcessingQueue) processQueue();
-                } else {
-                    resetSilenceTimer();
                 }
             }
         }, delay);
@@ -451,12 +378,12 @@ document.addEventListener("DOMContentLoaded", () => {
     resetSilenceTimer();
 
     // ==========================================
-    // 8. Buttons & Init
+    // 11. Buttons
     // ==========================================
     document.getElementById('btnTestTalk')?.addEventListener('click', () => {
         const text = scriptInput.value.trim();
         if (text) {
-            speechQueue.enqueue(text, 1, 'test');
+            speechQueue.enqueue(text, 1);
             if (!isProcessingQueue) processQueue();
         }
         clearTimeout(silenceTimer);
@@ -466,5 +393,14 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => wrapper.classList.remove('blinking'), 150);
     });
 
-    console.log("🚀 AI Host System Ready");
+    // ==========================================
+    // 12. ลบ Key อัตโนมัติเมื่อปิดหน้า
+    // ==========================================
+    window.addEventListener('beforeunload', () => {
+        // ถ้าต้องการให้ Key หายเมื่อปิดแท็บจริงๆ ให้ใช้ sessionStorage
+        // (ทำอยู่แล้วโดยปริยาย - sessionStorage จะหายเองเมื่อปิดแท็บ)
+        console.log("👋 ปิดหน้าเว็บ - Key จะถูกลบอัตโนมัติ");
+    });
+
+    console.log("🚀 AI Host Ready (Standalone Mode)");
 });
