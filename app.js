@@ -27,14 +27,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let audioUnlocked = false;
     function unlockAudio() {
         if (audioUnlocked) return;
-        // เล่นเสียงว่างๆ เพื่อปลดล็อก
         const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
         silentAudio.play().then(() => {
             audioUnlocked = true;
-            console.log("Audio Unlocked!");
         }).catch(() => {});
     }
-    // แตะหน้าจอที่ไหนก็ได้ 1 ครั้ง เพื่อปลดล็อกเสียง
     document.body.addEventListener('click', unlockAudio, { once: true });
     document.body.addEventListener('touchstart', unlockAudio, { once: true });
 
@@ -205,12 +202,9 @@ document.addEventListener("DOMContentLoaded", () => {
         isProcessingQueue = true;
         const textToSpeak = speechQueue.shift(); 
         await playAudio(textToSpeak);
-        
-        // เมื่อเล่นจบแล้ว ให้ไปคิวถัดไป
         processQueue(); 
     }
 
-    // ✅ ฟังก์ชันเล่นเสียงที่เสถียรขึ้น
     async function playAudio(text) {
         if (isSpeaking) {
             window.speechSynthesis.cancel();
@@ -230,7 +224,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             };
 
-            // ⏱️ Timeout 6 วินาที ถ้า Backend ไม่ตอบ ให้ใช้ Web Speech แทน
             const timeoutId = setTimeout(() => {
                 if (!hasResolved) {
                     console.log("Backend Timeout - Switching to Web Speech");
@@ -263,7 +256,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 };
 
                 await audio.play();
-                // ไม่ต้อง clear timeout ตรงนี้ เพราะรอจนจบเสียงจริงๆ ค่อย clear
 
             } catch (err) {
                 console.log("Fetch Error - Fallback to Web Speech", err);
@@ -273,7 +265,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // ฟังก์ชันเสียงสำรอง (Web Speech)
     function fallbackWebSpeech(text, callback) {
         if ('speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(text);
@@ -291,7 +282,6 @@ document.addEventListener("DOMContentLoaded", () => {
             
             window.speechSynthesis.speak(utterance);
         } else {
-            // ถ้าเบราว์เซอร์ไม่รองรับเสียงเลย ให้จบไปเลย
             stopTalkingAnim();
             if (callback) callback();
         }
@@ -363,13 +353,39 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ==========================================
-    // 7. Standby Mode
+    // 7. Standby Mode (ระบบวนลูปบทพูด)
     // ==========================================
+    
+    // ✅ เพิ่มจำนวนบทพูดให้เยอะขึ้น
     const standbyPrompts = [
         "สวัสดีครับทุกคน ผมชื่อพี่โอม พิธีกร AI ประจำรายการครับ",
+        "ยินดีต้อนรับเข้าสู่ห้องไลฟ์ครับ ใครเพิ่งเข้ามาก็ทักทายกันได้เลยนะครับ",
         "ฝากกดไลก์ กดติดตาม เป็นกำลังใจให้พี่โอมด้วยนะครับ",
-        "ใครมีคำถามหรือเรื่องไหนอยากคุยกับพี่โอม พิมพ์มาได้เลยครับ"
+        "ถ้าชอบรายการนี้ อย่าลืมกดหัวใจ กดติดตามกันด้วยนะครับ",
+        "ใครมีคำถามหรือเรื่องไหนอยากคุยกับพี่โอม พิมพ์มาได้เลยครับ",
+        "ช่วงนี้เงียบจังเลยครับ มีใครอยากแชทกับพี่โอมไหมครับ",
+        "วันนี้มีเรื่องอะไรสนุกๆ มาเล่าให้พี่โอมฟังบ้างไหมครับ",
+        "พี่โอมพร้อมตอบคำถามทุกคนเลยครับ พิมพ์มาได้เลย",
+        "ถ้าใครมีเรื่องอยากปรึกษา พี่โอมยินดีรับฟังนะครับ",
+        "มาคุยกับพี่โอมสนุกๆ กันดีกว่าครับ ใครอยู่บ้างยกมือขึ้น",
+        "อย่าลืมแชร์ไลฟ์นี้ให้เพื่อนๆ มาดูด้วยนะครับ",
+        "ขอบคุณทุกคนที่เข้ามาเป็นกำลังใจให้พี่โอมนะครับ"
     ];
+
+    // ✅ ระบบสุ่มแบบไม่ซ้ำ (Shuffle Bag)
+    let promptBag = [];
+    function getNextStandbyPrompt() {
+        if (promptBag.length === 0) {
+            // ถ้าคลังว่าง ให้เอาบทพูดทั้งหมดมาใส่แล้วสลับตำแหน่ง (Fisher-Yates Shuffle)
+            promptBag = [...standbyPrompts];
+            for (let i = promptBag.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [promptBag[i], promptBag[j]] = [promptBag[j], promptBag[i]];
+            }
+        }
+        // ดึงบทพูดอันแรกออกมา (ซึ่งจะไม่ซ้ำกับรอบก่อนหน้า)
+        return promptBag.pop();
+    }
 
     function checkMealTime() {
         const hour = new Date().getHours();
@@ -382,13 +398,18 @@ document.addEventListener("DOMContentLoaded", () => {
     function resetSilenceTimer() {
         clearTimeout(silenceTimer);
         silenceTimer = setTimeout(() => {
-            // เช็คว่าไม่ได้กำลังพูด และคิวว่างอยู่จริงๆ ถึงจะพูด Standby
             if (!isSpeaking && !isDragging && speechQueue.length === 0) { 
                 const mealPrompt = checkMealTime();
-                const prompt = mealPrompt || standbyPrompts[Math.floor(Math.random() * standbyPrompts.length)];
-                enqueueSpeech(prompt);
+                
+                if (mealPrompt) {
+                    enqueueSpeech(mealPrompt);
+                } else {
+                    // ✅ ดึงบทพูดจากระบบสลับ
+                    const nextPrompt = getNextStandbyPrompt();
+                    enqueueSpeech(nextPrompt);
+                }
             }
-        }, 15000); 
+        }, 15000); // 15 วินาที
     }
     
     resetSilenceTimer();
