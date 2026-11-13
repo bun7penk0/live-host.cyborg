@@ -22,16 +22,32 @@ document.addEventListener("DOMContentLoaded", () => {
     let isProcessingQueue = false;
 
     // ==========================================
-    // 1. ระบบ Matrix Background (Canvas 2D)
+    // 0. ปลดล็อกเสียงของเบราว์เซอร์ (Autoplay Policy)
+    // ==========================================
+    let audioUnlocked = false;
+    function unlockAudio() {
+        if (audioUnlocked) return;
+        // เล่นเสียงว่างๆ เพื่อปลดล็อก
+        const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+        silentAudio.play().then(() => {
+            audioUnlocked = true;
+            console.log("Audio Unlocked!");
+        }).catch(() => {});
+    }
+    // แตะหน้าจอที่ไหนก็ได้ 1 ครั้ง เพื่อปลดล็อกเสียง
+    document.body.addEventListener('click', unlockAudio, { once: true });
+    document.body.addEventListener('touchstart', unlockAudio, { once: true });
+
+    // ==========================================
+    // 1. ระบบ Matrix Background
     // ==========================================
     const canvas = document.getElementById('matrixCanvas');
     const ctx = canvas.getContext('2d');
     
     let matrixInterval;
     let isMatrixOn = true;
-    let matrixSpeed = 50; // ms ต่อเฟรม (ยิ่งน้อยยิ่งเร็ว)
+    let matrixSpeed = 50;
     
-    // ตัวอักษร Matrix
     const matrixChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*";
     const fontSize = 16;
     let columns, drops;
@@ -45,20 +61,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function drawMatrix() {
-        // สีพื้นหลังจางๆ เพื่อให้เกิด Effect หางยาว
         ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = "#00E5FF"; // สีฟ้าไซเบอร์
+        ctx.fillStyle = "#00E5FF";
         ctx.font = `${fontSize}px monospace`;
 
         for (let i = 0; i < drops.length; i++) {
             const text = matrixChars[Math.floor(Math.random() * matrixChars.length)];
             ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-
-            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-                drops[i] = 0;
-            }
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
             drops[i]++;
         }
     }
@@ -68,7 +79,6 @@ document.addEventListener("DOMContentLoaded", () => {
         matrixInterval = setInterval(drawMatrix, matrixSpeed);
     }
 
-    // จัดการปุ่ม Matrix
     const btnMatrixToggle = document.getElementById('btnMatrixToggle');
     const selectMatrixSpeed = document.getElementById('matrixSpeed');
 
@@ -92,26 +102,20 @@ document.addEventListener("DOMContentLoaded", () => {
         if (val === 'slow') matrixSpeed = 100;
         if (val === 'normal') matrixSpeed = 50;
         if (val === 'fast') matrixSpeed = 20;
-        
         if (isMatrixOn) {
             clearInterval(matrixInterval);
             startMatrix();
         }
     });
 
-    // เริ่ม Matrix ทันทีที่โหลด
     startMatrix();
 
-    // ปรับขนาด Canvas เมื่อหน้าจอเปลี่ยน
     window.addEventListener('resize', () => {
-        if (isMatrixOn) {
-            initMatrix();
-        }
+        if (isMatrixOn) initMatrix();
     });
 
-
     // ==========================================
-    // 2. ระบบตำแหน่งปาก (เหมือนเดิม)
+    // 2. ระบบตำแหน่งปาก
     // ==========================================
     function updateMouthPosition() {
         mouthPart.style.left = `calc(50% + ${posX}px)`;
@@ -201,9 +205,12 @@ document.addEventListener("DOMContentLoaded", () => {
         isProcessingQueue = true;
         const textToSpeak = speechQueue.shift(); 
         await playAudio(textToSpeak);
+        
+        // เมื่อเล่นจบแล้ว ให้ไปคิวถัดไป
         processQueue(); 
     }
 
+    // ✅ ฟังก์ชันเล่นเสียงที่เสถียรขึ้น
     async function playAudio(text) {
         if (isSpeaking) {
             window.speechSynthesis.cancel();
@@ -215,6 +222,22 @@ document.addEventListener("DOMContentLoaded", () => {
         startTalkingAnim();
 
         return new Promise(async (resolve) => {
+            let hasResolved = false;
+            const safeResolve = () => {
+                if (!hasResolved) {
+                    hasResolved = true;
+                    resolve();
+                }
+            };
+
+            // ⏱️ Timeout 6 วินาที ถ้า Backend ไม่ตอบ ให้ใช้ Web Speech แทน
+            const timeoutId = setTimeout(() => {
+                if (!hasResolved) {
+                    console.log("Backend Timeout - Switching to Web Speech");
+                    fallbackWebSpeech(text, safeResolve);
+                }
+            }, 6000);
+
             try {
                 const response = await fetch(`${BACKEND_URL}/api/tts`, {
                     method: 'POST',
@@ -229,22 +252,49 @@ document.addEventListener("DOMContentLoaded", () => {
                 const audio = new Audio(audioUrl);
                 
                 audio.onended = () => {
+                    clearTimeout(timeoutId);
                     stopTalkingAnim();
-                    resolve(); 
+                    safeResolve();
                 };
+                
+                audio.onerror = () => {
+                    clearTimeout(timeoutId);
+                    fallbackWebSpeech(text, safeResolve);
+                };
+
                 await audio.play();
+                // ไม่ต้อง clear timeout ตรงนี้ เพราะรอจนจบเสียงจริงๆ ค่อย clear
 
             } catch (err) {
-                console.log("Fallback to Web Speech");
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'th-TH';
-                utterance.onend = () => {
-                    stopTalkingAnim();
-                    resolve(); 
-                };
-                window.speechSynthesis.speak(utterance);
+                console.log("Fetch Error - Fallback to Web Speech", err);
+                clearTimeout(timeoutId);
+                fallbackWebSpeech(text, safeResolve);
             }
         });
+    }
+
+    // ฟังก์ชันเสียงสำรอง (Web Speech)
+    function fallbackWebSpeech(text, callback) {
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'th-TH';
+            utterance.rate = 1.0;
+            
+            utterance.onend = () => {
+                stopTalkingAnim();
+                if (callback) callback();
+            };
+            utterance.onerror = () => {
+                stopTalkingAnim();
+                if (callback) callback();
+            };
+            
+            window.speechSynthesis.speak(utterance);
+        } else {
+            // ถ้าเบราว์เซอร์ไม่รองรับเสียงเลย ให้จบไปเลย
+            stopTalkingAnim();
+            if (callback) callback();
+        }
     }
 
     // ==========================================
@@ -270,6 +320,7 @@ document.addEventListener("DOMContentLoaded", () => {
             enqueueSpeech(data.reply);
 
         } catch (err) {
+            console.log("Gemini Error", err);
             enqueueSpeech("ขอโทษครับ พี่โอมคิดช้าไปนิดนึง");
         }
     };
@@ -331,6 +382,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function resetSilenceTimer() {
         clearTimeout(silenceTimer);
         silenceTimer = setTimeout(() => {
+            // เช็คว่าไม่ได้กำลังพูด และคิวว่างอยู่จริงๆ ถึงจะพูด Standby
             if (!isSpeaking && !isDragging && speechQueue.length === 0) { 
                 const mealPrompt = checkMealTime();
                 const prompt = mealPrompt || standbyPrompts[Math.floor(Math.random() * standbyPrompts.length)];
