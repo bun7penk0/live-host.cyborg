@@ -605,28 +605,98 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // ==========================================
-    // 12. 🔥 STANDBY MODE (30 วินาที ตาม SPEC)
-    // ==========================================
-    let silenceTimer;
-    
-    function resetSilenceTimer() {
-        clearTimeout(silenceTimer);
-        // SPEC ข้อ 6: ระยะห่างบทพูดทั่วไป 30 วินาที
-        silenceTimer = setTimeout(() => {
-            if (!isSpeaking && !isDragging && speechQueue.length === 0) { 
-                const decision = decideNextSpeech();
-                if (decision) {
-                    speechQueue.enqueue(decision.text, decision.priority, 'auto');
-                    if (!isProcessingQueue) processQueue();
-                } else {
-                    // ไม่มีอะไรจะพูด ให้รออีก 30 วิ
-                    resetSilenceTimer();
-                }
-            }
-        }, 30000); // 30 วินาที
+// 12. 🔥 STANDBY MODE (Dynamic Interval)
+// ==========================================
+
+// ค่าความหน่วงแบบไดนามิก (สุ่มจากตัวเลขเหล่านี้)
+// ช่วยให้จังหวะพูดไม่ตายตัว เหมือนคนจริง
+const DYNAMIC_DELAYS = [7000, 15000, 20000, 30000]; // 7วิ, 15วิ, 20วิ, 30วิ
+// เพิ่มโอกาสให้พูดเร็วขึ้นหรือช้าลงตามบริบท
+const FAST_DELAY = 7000;    // ถ้าคนดูเงียบ
+const NORMAL_DELAY = 15000; // ถ้าคนดูคุยปกติ
+const SLOW_DELAY = 30000;   // ถ้ามีคนคุยอยู่ ให้รอ
+
+let silenceTimer;
+let lastConversationTime = 0; // เก็บเวลาล่าสุดที่มีคนพิมพ์
+let conversationCount = 0;     // นับจำนวนข้อความล่าสุด
+
+function getRandomDelay() {
+    // 1. ถ้ามีคนคุยด้วยเมื่อกี้ (ภายใน 30 วิ) → รอนานขึ้น ไม่ขัดจังหวะ
+    const timeSinceConversation = Date.now() - lastConversationTime;
+    if (timeSinceConversation < 30000 && conversationCount > 0) {
+        return SLOW_DELAY; // 30 วิ
     }
     
-    resetSilenceTimer();
+    // 2. ถ้าไม่มีคนคุยเลยนานเกิน 2 นาที → พูดบ่อยขึ้น
+    if (timeSinceConversation > 120000) {
+        return FAST_DELAY; // 7 วิ
+    }
+    
+    // 3. สุ่มแบบไดนามิกจากตัวเลือก
+    return DYNAMIC_DELAYS[Math.floor(Math.random() * DYNAMIC_DELAYS.length)];
+}
+
+function resetSilenceTimer() {
+    clearTimeout(silenceTimer);
+    
+    // คำนวณเวลาหน่วงแบบไดนามิก
+    const delay = getRandomDelay();
+    console.log(`⏱️ พี่โอมจะพูดในอีก ${(delay/1000).toFixed(1)} วินาที`);
+    
+    silenceTimer = setTimeout(() => {
+        if (!isSpeaking && !isDragging && speechQueue.length === 0) { 
+            const decision = decideNextSpeech();
+            if (decision) {
+                speechQueue.enqueue(decision.text, decision.priority, 'auto');
+                if (!isProcessingQueue) processQueue();
+            } else {
+                // ไม่มีอะไรจะพูด ให้รออีกครั้ง
+                resetSilenceTimer();
+            }
+        }
+    }, delay);
+}
+
+// เริ่มต้นจับเวลา
+resetSilenceTimer();
+
+// ==========================================
+// 13. 🔥 CONVERSATION TRACKING (จับบริบทการคุย)
+// ==========================================
+// แก้ไขฟังก์ชัน sendMockChat เพื่อบันทึกเวลาที่มีคนคุย
+const originalSendMockChat = window.sendMockChat;
+window.sendMockChat = async function() {
+    // บันทึกเวลาที่มีคนคุย
+    lastConversationTime = Date.now();
+    conversationCount++;
+    
+    // เรียกฟังก์ชันเดิม
+    await originalSendMockChat();
+};
+
+// ==========================================
+// 14. BUTTONS (ทดสอบ)
+// ==========================================
+document.getElementById('btnTestTalk')?.addEventListener('click', () => {
+    const text = scriptInput.value.trim();
+    if (text) {
+        speechQueue.enqueue(text, 1, 'test');
+        if (!isProcessingQueue) processQueue();
+    }
+    clearTimeout(silenceTimer);
+});
+document.getElementById('btnTestBlink')?.addEventListener('click', () => {
+    wrapper.classList.add('blinking');
+    setTimeout(() => wrapper.classList.remove('blinking'), 150);
+});
+
+// ==========================================
+// 15. INIT
+// ==========================================
+console.log("🚀 AI Host System Ready (Phase 1)");
+console.log("📋 SPEC: Priority Queue + Duplicate Window + Dynamic Interval");
+console.log("🎯 Priority Levels: 1=Chat, 2=Gift/Follow, 3=Greeting, 4=Conversation, 5=Time, 6=Like");
+console.log("⏱️ Dynamic Delays: 7s, 15s, 20s, 30s (Smart)");
 
     // ==========================================
     // 13. BUTTONS
