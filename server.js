@@ -2,39 +2,55 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 
-// 1. เปิดให้ทุกโดเมนสามารถเชื่อมต่อได้ (แก้ปัญหา CORS)
 app.use(cors());
 app.use(express.json());
 
-// 2. เพิ่ม Route / เพื่อให้เช็กได้ว่า Server ทำงาน
-app.get('/', (req, res) => {
-    res.send('🤖 Cyborg Backend is Running!');
-});
+// ตัวแปรเก็บประวัติการคุย (จำกัด 5 ข้อความล่าสุดเพื่อประหยัด Token)
+let chatHistory = [];
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY; 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; 
 
-// 3. Endpoint สำหรับ Gemini AI
+app.get('/', (req, res) => res.send('🤖 Cyborg Backend is Running!'));
+
+// --- ระบบ AI Chat ที่จำบริบท ---
 app.post('/api/chat', async (req, res) => {
     try {
-        // เปลี่ยนเป็น gemini-1.5-flash เพื่อความเร็วและรองรับ API Key ใหม่
+        const userMessage = req.body.message;
+        
+        // 1. เก็บข้อความของ User ลงประวัติ
+        chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
+        
+        // 2. ถ้าประวัติยาวเกิน 5 คู่ ให้ลบอันเก่าทิ้ง
+        if (chatHistory.length > 10) chatHistory = chatHistory.slice(-10);
+
+        // 3. ส่งไปให้ Gemini
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: `คุณคือพี่โอม พิธีกร AI ครึ่งคนครึ่งไซบอร์ก ตอบสั้นๆ สุภาพ: ${req.body.message}` }] }]
+                system_instruction: {
+                    parts: [{ text: "คุณคือพี่โอม พิธีกร AI ครึ่งคนครึ่งไซบอร์ก ให้ตอบคำถามสั้นๆ สุภาพ เป็นกันเอง ห้ามตอบเรื่องการเมือง ศาสนา หรือคำหยาบ" }]
+                },
+                contents: chatHistory // ส่งประวัติไปด้วยเพื่อให้ AI จำบริบท
             })
         });
+        
         const data = await response.json();
-        res.json({ reply: data.candidates[0].content.parts[0].text });
+        const botReply = data.candidates[0].content.parts[0].text;
+
+        // 4. เก็บคำตอบของ AI ลงประวัติ
+        chatHistory.push({ role: "model", parts: [{ text: botReply }] });
+
+        res.json({ reply: botReply });
     } catch (error) {
         console.error("Gemini Error:", error);
         res.status(500).json({ error: "AI Error" });
     }
 });
 
-// 4. Endpoint สำหรับ ElevenLabs TTS
+// --- ระบบเสียง TTS ---
 app.post('/api/tts', async (req, res) => {
     try {
         const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
@@ -49,11 +65,9 @@ app.post('/api/tts', async (req, res) => {
         res.set('Content-Type', 'audio/mpeg');
         res.send(Buffer.from(audioBuffer));
     } catch (error) {
-        console.error("TTS Error:", error);
         res.status(500).json({ error: "TTS Error" });
     }
 });
 
-// 5. รัน Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`));
