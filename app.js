@@ -95,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         isSpeaking = false;
         
-        // ✅ สำคัญมาก: เมื่อพูดจบ ให้เริ่มนับเวลา Standby ใหม่ทันที
+        // เมื่อพูดจบ ให้เริ่มนับเวลา Standby ใหม่
         resetSilenceTimer(); 
     }
 
@@ -103,7 +103,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // 3. ระบบเสียงพูด (TTS)
     // ==========================================
     async function botSpeak(text) {
-        // ถ้ากำลังพูดอยู่ ให้หยุดก่อน
         if (isSpeaking) {
             window.speechSynthesis.cancel();
             stopTalkingAnim();
@@ -125,8 +124,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const audioBlob = await response.blob();
             const audioUrl = URL.createObjectURL(audioBlob);
             const audio = new Audio(audioUrl);
-            
-            // ✅ เมื่อเสียง ElevenLabs เล่นจบ
             audio.onended = () => stopTalkingAnim();
             await audio.play();
 
@@ -134,7 +131,6 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log("Fallback to Web Speech");
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'th-TH';
-            // ✅ เมื่อเสียง Web Speech เล่นจบ
             utterance.onend = () => stopTalkingAnim(); 
             window.speechSynthesis.speak(utterance);
         }
@@ -150,7 +146,7 @@ document.addEventListener("DOMContentLoaded", () => {
         addChatBubble("ผู้ชม", text);
         mockChatInput.value = '';
         
-        // ✅ มีคนคุยด้วย -> หยุดเวลา Standby (ให้ AI ตอบก่อน)
+        // มีคนคุยด้วย -> หยุดเวลา Standby ชั่วคราว
         clearTimeout(silenceTimer);
 
         try {
@@ -162,7 +158,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (!response.ok) throw new Error("Gemini failed");
             const data = await response.json();
-            botSpeak(data.reply); // ให้ AI พูดตอบ
+            botSpeak(data.reply); 
 
         } catch (err) {
             const fallback = ["สวัสดีครับ มีอะไรให้พี่โอมช่วยไหมครับ", "คำถามนี้น่าสนใจมากครับ"];
@@ -180,12 +176,10 @@ document.addEventListener("DOMContentLoaded", () => {
         chatOverlay.appendChild(bubble);
         chatOverlay.scrollTop = chatOverlay.scrollHeight;
         
-        // เก็บไว้แค่ 2 ข้อความ
         while (chatOverlay.children.length > 2) {
             chatOverlay.removeChild(chatOverlay.firstChild);
         }
 
-        // หายเองใน 5 วินาที
         setTimeout(() => {
             if (bubble.parentNode) {
                 bubble.style.transition = 'opacity 0.5s';
@@ -210,28 +204,56 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ==========================================
-    // 7. Standby Mode (หัวใจของการพูดอัตโนมัติ)
+    // 7. ระบบ Standby Mode (วนลูป + เช็กเวลา)
     // ==========================================
+    
+    // คลังบทพูดสำหรับ Standby
     const standbyPrompts = [
-        "ใครมีคำถามพิมพ์ถามพี่โอมได้เลยครับ",
+        // กลุ่มทักทายและแนะนำตัว
+        "สวัสดีครับทุกคน ผมชื่อพี่โอม พิธีกร AI ประจำรายการครับ",
+        "ยินดีต้อนรับเข้าสู่ห้องไลฟ์ครับ ใครเพิ่งเข้ามาก็ทักทายกันได้เลยนะครับ",
+        // กลุ่มชวนกดไลก์ติดตาม
         "ฝากกดไลก์ กดติดตาม เป็นกำลังใจให้พี่โอมด้วยนะครับ",
-        "ช่วงนี้เงียบจังเลยครับ มีใครอยากคุยกับพี่โอมไหมครับ"
+        "ถ้าชอบรายการนี้ อย่าลืมกดหัวใจ กดติดตามกันด้วยนะครับ",
+        // กลุ่มชวนพูดคุย
+        "ใครมีคำถามหรือเรื่องไหนอยากคุยกับพี่โอม พิมพ์มาได้เลยครับ",
+        "ช่วงนี้เงียบจังเลยครับ มีใครอยากแชทกับพี่โอมไหมครับ",
+        "วันนี้มีเรื่องอะไรสนุกๆ มาเล่าให้พี่โอมฟังบ้างไหมครับ"
     ];
 
+    // ฟังก์ชันเช็กเวลา (เพื่อชวนกินข้าว)
+    function checkMealTime() {
+        const now = new Date();
+        const hour = now.getHours();
+        
+        // เช็กว่าเป็นเวลา 2:00, 12:00 หรือ 20:00 น. หรือไม่
+        if (hour === 2) return "ตี 2 แล้วนะครับ ใครยังไม่นอนบ้างครับ กินข้าวหรือยังครับ อย่าลืมดูแลสุขภาพด้วยนะครับ";
+        if (hour === 12) return "เที่ยงแล้วนะครับทุกคน อย่าลืมทานข้าวกลางวันกันด้วยนะครับ พี่โอมเป็นห่วง";
+        if (hour === 20) return "สองทุ่มแล้วครับ ใครยังไม่ได้กินข้าวเย็นบ้างครับ รีบไปทานข้าวกันนะครับ";
+        
+        return null; // ถ้าไม่ใช่เวลาอาหาร ให้คืนค่า null
+    }
+
     function resetSilenceTimer() {
-        // ล้างเวลาเดิมก่อนทุกครั้ง
         clearTimeout(silenceTimer);
         
-        // ตั้งเวลาใหม่ 15 วินาที
         silenceTimer = setTimeout(() => {
-            // เช็กว่าไม่ได้กำลังพูด และไม่ได้กำลังลากปาก
             if (!isSpeaking && !isDragging) { 
-                const prompt = standbyPrompts[Math.floor(Math.random() * standbyPrompts.length)];
-                botSpeak(prompt); // พูดข้อความ Standby
+                // 1. เช็กเวลาก่อนว่าถึงเวลากินข้าวหรือยัง
+                const mealPrompt = checkMealTime();
+                
+                if (mealPrompt) {
+                    // ถ้าถึงเวลากินข้าว ให้พูดเรื่องกินข้าวก่อน 1 ครั้ง
+                    botSpeak(mealPrompt);
+                } else {
+                    // ถ้าไม่ใช่เวลากินข้าว ให้พูดบท Standby ทั่วไปแบบสุ่ม
+                    const prompt = standbyPrompts[Math.floor(Math.random() * standbyPrompts.length)];
+                    botSpeak(prompt);
+                }
             }
-        }, 15000); // 15000 ms = 15 วินาที
+        }, 15000); // 15 วินาที
     }
     
-    // เริ่มระบบ Standby ทันทีที่โหลดหน้าเว็บ
+    // เริ่มต้นจับเวลา Standby
     resetSilenceTimer();
 });
