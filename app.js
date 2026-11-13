@@ -288,32 +288,42 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ==========================================
-    // 4. ระบบตอบแชท (Gemini)
-    // ==========================================
-    window.sendMockChat = async function() {
-        const text = mockChatInput.value.trim();
-        if (!text) return;
+// 4. ระบบตอบแชท (Gemini)
+// ==========================================
+window.sendMockChat = async function() {
+    const text = mockChatInput.value.trim();
+    if (!text) return;
+    
+    addChatBubble("ผู้ชม", text);
+    mockChatInput.value = '';
+    clearTimeout(silenceTimer); 
+
+    try {
+        console.log("กำลังส่งข้อความไปที่ Backend:", text);
         
-        addChatBubble("ผู้ชม", text);
-        mockChatInput.value = '';
-        clearTimeout(silenceTimer); 
+        const response = await fetch(`${BACKEND_URL}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text })
+        });
 
-        try {
-            const response = await fetch(`${BACKEND_URL}/api/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
-            });
-
-            if (!response.ok) throw new Error("Gemini failed");
-            const data = await response.json();
-            enqueueSpeech(data.reply);
-
-        } catch (err) {
-            console.log("Gemini Error", err);
-            enqueueSpeech("ขอโทษครับ พี่โอมคิดช้าไปนิดนึง");
+        // ✅ ดึงข้อความ Error ที่แท้จริงจาก Backend ออกมาดู
+        if (!response.ok) {
+            const errorData = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorData}`);
         }
-    };
+        
+        const data = await response.json();
+        console.log("ได้คำตอบจาก Gemini:", data.reply);
+        enqueueSpeech(data.reply);
+
+    } catch (err) {
+        console.error("🚨 เกิดข้อผิดพลาดในการเชื่อมต่อ Backend:", err.message);
+        
+        // ✅ ถ้า Error ให้พูดบอกผู้ชมว่าเจอปัญหา พร้อมสาเหตุแบบคร่าวๆ
+        enqueueSpeech(`ขอโทษครับ ระบบหลังบ้านมีปัญหานิดหน่อยครับ`);
+    }
+};
 
     // ==========================================
     // 5. UI แชท
