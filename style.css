@@ -137,11 +137,11 @@ header {
     filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.3)); 
 }
 
-/* ลำโพง (ปาก) */
+/* ลำโพง (ปาก) - ปรับให้เล็กลง */
 .mouth-part {
     position: absolute; 
-    width: 44px; 
-    height: 44px; 
+    width: 22px;  /* ✅ ลดจาก 44px เหลือ 22px */
+    height: 22px; /* ✅ ลดจาก 44px เหลือ 22px */
     display: flex; 
     justify-content: center; 
     align-items: center; 
@@ -158,7 +158,7 @@ header {
     background: radial-gradient(circle, #222 30%, #000 70%); 
     border: 2px solid var(--cyber-blue); 
     border-radius: 50%;
-    box-shadow: 0 0 10px rgba(0, 229, 255, 0.5), inset 0 0 10px rgba(0, 229, 255, 0.5);
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.5), inset 0 0 8px rgba(0, 229, 255, 0.5);
     position: relative; 
     display: flex; 
     justify-content: center; 
@@ -173,6 +173,9 @@ header {
     background: #111; 
     border-radius: 50%; 
 }
+
+     
+    
 
 /* คลื่นเสียง */
 .sound-wave {
