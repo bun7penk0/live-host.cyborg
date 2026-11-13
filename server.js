@@ -8,7 +8,7 @@ app.use(express.json());
 // ตัวแปรเก็บประวัติการคุย (จำกัด 5 ข้อความล่าสุดเพื่อประหยัด Token)
 let chatHistory = [];
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY; 
+ const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; 
 
