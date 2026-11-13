@@ -6,19 +6,36 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; user-select: none; }
 
-body {
-    background-color: var(--bg-dark);
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
     overflow: hidden;
+    background-color: var(--bg-dark);
     color: white;
 }
 
-.app-container { display: flex; flex-direction: column; height: 100%; }
+body {
+    /* ✅ ใช้ 100dvh เพื่อรองรับมือถือที่มีแถบ URL (Dynamic Viewport Height) */
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-container { 
+    display: flex; 
+    flex-direction: column; 
+    height: 100%; 
+    overflow: hidden; 
+}
 
 header {
-    display: flex; justify-content: space-between; padding: 15px; background: rgba(30, 30, 30, 0.9); z-index: 10;
+    display: flex; 
+    justify-content: space-between; 
+    padding: 15px; 
+    background: rgba(30, 30, 30, 0.9); 
+    z-index: 10;
+    flex-shrink: 0; /* ✅ ไม่ให้ Header ถูกบีบ */
 }
 
 .badge { background: #333; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; border: 1px solid var(--cyber-blue); color: var(--cyber-blue); }
@@ -27,13 +44,14 @@ header {
 /* === พื้นที่หลัก (ห้องส่ง) === */
 .studio-container {
     position: relative; 
-    flex: 1; 
+    flex: 1; /* ✅ ยืดหยุ่นเต็มพื้นที่ที่เหลือ */
+    min-height: 40vh; /* ✅ ความสูงขั้นต่ำ */
     overflow: hidden; 
     display: flex; 
     align-items: center; 
     justify-content: center;
-    padding: 15px;
-    background: #000; /* สีดำสนิทเพื่อให้ Matrix เด่น */
+    padding: 10px;
+    background: #000;
 }
 
 /* 🔥 Canvas สำหรับ Matrix */
@@ -43,14 +61,14 @@ header {
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 1; /* อยู่ชั้นล่างสุด */
-    opacity: 0.6; /* ความโปร่งใสไม่ให้แย่งสายตา */
+    z-index: 1;
+    opacity: 0.6;
     pointer-events: none;
     transition: opacity 0.3s;
 }
 
 #matrixCanvas.hidden {
-    opacity: 0; /* ซ่อนเมื่อกดปิด */
+    opacity: 0;
 }
 
 /* กรอบล้อมรอบตัวละคร */
@@ -68,7 +86,7 @@ header {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2; /* อยู่เหนือ Matrix */
+    z-index: 2;
 }
 
 /* ไฟวิ่งขอบบน */
@@ -111,12 +129,11 @@ header {
 }
 
 .character-image {
-    max-height: 60vh; 
+    max-height: 100%; 
     max-width: 100%; 
     object-fit: contain; 
     pointer-events: none; 
     transition: filter 0.1s ease;
-    /* เพิ่ม Drop shadow เพื่อให้ตัวละครตัดกับพื้นหลัง Matrix */
     filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.3)); 
 }
 
@@ -217,12 +234,16 @@ header {
     border-radius: 20px 20px 0 0; 
     z-index: 10; 
     overflow-y: auto; 
-    max-height: 45vh; 
+    flex-shrink: 0; /* ✅ ไม่ให้ถูกบีบ */
+    max-height: 50vh; /* ✅ จำกัดความสูงไม่เกินครึ่งจอ */
     border-top: 1px solid var(--cyber-blue);
+    /* เพิ่ม Padding ล่างเพื่อไม่ให้ปุ่มสุดท้ายชิดขอบเกินไป */
+    padding-bottom: 30px; 
 }
+
 .section-title { font-size: 1rem; margin-bottom: 5px; color: #ccc; margin-top: 10px;}
 
-/* แผงควบคุม Matrix (ใหม่) */
+/* แผงควบคุม Matrix */
 .matrix-controls {
     display: flex;
     justify-content: space-between;
