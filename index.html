@@ -3,36 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Cybernetic Host - Bumblebee</title>
+    <title>CYBER MATRIX LIVE STUDIO</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="app-container">
+        <!-- Header -->
         <header>
             <div class="badge">CYBER ROOM • Live Studio</div>
             <div class="status-badge" id="liveStatus">STANDBY</div>
         </header>
 
+        <!-- Main Studio Area -->
         <div class="studio-container" id="studioContainer">
             
-            <!-- กรอบ Cyber Frame -->
+            <!-- 🔥 ชั้นที่ 1: Matrix Background -->
+            <canvas id="matrixCanvas"></canvas>
+
+            <!-- 🔥 ชั้นที่ 2: กรอบ Cyber Frame -->
             <div class="cyber-frame">
                 <div class="cyber-corner tl"></div>
                 <div class="cyber-corner tr"></div>
                 <div class="cyber-corner bl"></div>
                 <div class="cyber-corner br"></div>
 
-                <div class="chat-overlay" id="chatOverlay"></div>
-
+                <!-- ชั้นที่ 3: ตัวละครหลัก -->
                 <div class="character-wrapper" id="characterWrapper">
                     <img src="IMG_20261112_173720.jpg" alt="Cyber Host" class="character-image" id="characterImage" draggable="false">
                     
-                    <!-- ปาก / ไมค์ - แก้ใหม่: มีคลื่น 3 ชั้น -->
                     <div class="mouth-part" id="mouthPart">
-                        <div class="mouth-wave"></div>
-                        <div class="mouth-wave w2"></div>
-                        <div class="mouth-wave w3"></div>
                         <div class="mouth-shape" id="mouthShape"></div>
                     </div>
 
@@ -40,26 +40,48 @@
                         <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
                     </div>
                 </div>
+
+                <!-- ชั้นที่ 4: แชท Overlay -->
+                <div class="chat-overlay" id="chatOverlay"></div>
             </div>
 
         </div>
 
+        <!-- Control Panel -->
         <div class="control-panel">
+            
+            <!-- แผงควบคุม Matrix (ใหม่) -->
+            <div class="matrix-controls">
+                <h3>🌐 Matrix Background</h3>
+                <div class="matrix-toggle-group">
+                    <button class="btn-matrix active" id="btnMatrixToggle">เปิด</button>
+                    <select id="matrixSpeed" class="select-matrix">
+                        <option value="slow">ช้า</option>
+                        <option value="normal" selected>ปกติ</option>
+                        <option value="fast">เร็ว</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- ช่องแชทจำลอง -->
             <div class="section-title">🧪 จำลองแชทผู้ชม (ทดสอบ)</div>
             <div class="mock-chat-group">
                 <input type="text" id="mockChatInput" placeholder="พิมพ์คำถามผู้ชม..." onkeypress="if(event.key === 'Enter') sendMockChat()">
                 <button onclick="sendMockChat()" class="btn-send">ส่ง</button>
             </div>
 
+            <!-- ปุ่มทดสอบ -->
             <div class="section-title">ทดสอบอนิเมชัน</div>
             <div class="button-group">
                 <button class="btn btn-eye" id="btnTestBlink">⚡ กะพริบแสง</button>
                 <button class="btn btn-mouth" id="btnTestTalk">🎙️ พูดบท</button>
             </div>
 
+            <!-- บทพูด -->
             <div class="section-title">บทพูดภาษาไทย</div>
             <textarea id="scriptInput" rows="2">สวัสดีครับ ผมคือพี่โอม พิธีกร AI ประจำรายการวันนี้</textarea>
 
+            <!-- ปรับตำแหน่ง -->
             <div class="section-title">ปรับตำแหน่งปาก</div>
             <button class="btn btn-toggle-drag" id="btnToggleDrag">👉 เปิดโหมดลากปาก</button>
             <button class="btn btn-save" onclick="savePositions()">🔒 บันทึกตำแหน่ง</button>
