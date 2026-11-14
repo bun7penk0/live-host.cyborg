@@ -5,9 +5,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const BACKEND_URL = "https://cyborg-backend-production.up.railway.app";
     
     // โหลดโหมดจาก sessionStorage (default = backend)
-    let currentMode = sessionStorage.getItem('apiMode') || 'backend';
     let GEMINI_KEY = sessionStorage.getItem('geminiKey') || '';
-    let ELEVENLABS_KEY = sessionStorage.getItem('elevenLabsKey') || '';
+let ELEVENLABS_KEY = sessionStorage.getItem('elevenLabsKey') || '';
+// ✅ เพิ่มบรรทัดนี้: ดึง Voice ID จาก sessionStorage (ถ้าไม่มีใช้ค่า default)
+let ELEVENLABS_VOICE_ID = sessionStorage.getItem('elevenLabsVoiceId') || "21m00Tcm4TlvDq8ikWAM";
     const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 
     // ==========================================
