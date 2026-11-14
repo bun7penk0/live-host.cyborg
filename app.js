@@ -72,21 +72,31 @@ let ELEVENLABS_VOICE_ID = sessionStorage.getItem('elevenLabsVoiceId') || "21m00T
     });
 
     // ลบ Key ทั้งหมด
-    document.getElementById('btnClearKeys').addEventListener('click', () => {
-        if (confirm("ลบ Key และกลับไปใช้ Backend ใช่ไหมครับ?")) {
-            sessionStorage.removeItem('geminiKey');
-            sessionStorage.removeItem('elevenLabsKey');
-            sessionStorage.removeItem('apiMode');
-            GEMINI_KEY = '';
-            ELEVENLABS_KEY = '';
-            currentMode = 'backend';
-            document.getElementById('geminiKeyInput').value = '';
-            document.getElementById('elevenLabsKeyInput').value = '';
-            document.querySelector('input[name="apiMode"][value="backend"]').checked = true;
-            updateModeUI();
-            checkKeys();
+    document.getElementById('btnSaveKeys').addEventListener('click', () => {
+    const gemini = document.getElementById('geminiKeyInput').value.trim();
+    const eleven = document.getElementById('elevenLabsKeyInput').value.trim();
+    const voiceId = document.getElementById('elevenLabsVoiceIdInput').value.trim(); // ✅ เพิ่ม
+    
+    if (currentMode === 'direct') {
+        if (!gemini || !eleven) {
+            alert("กรุณากรอก API Key ให้ครบทั้ง 2 ช่องครับ");
+            return;
         }
-    });
+        GEMINI_KEY = gemini;
+        ELEVENLABS_KEY = eleven;
+        
+        // ✅ บันทึก Voice ID (ถ้าไม่กรอกให้ใช้ค่า default)
+        ELEVENLABS_VOICE_ID = voiceId || "21m00Tcm4TlvDq8ikWAM";
+        
+        sessionStorage.setItem('geminiKey', gemini);
+        sessionStorage.setItem('elevenLabsKey', eleven);
+        sessionStorage.setItem('elevenLabsVoiceId', ELEVENLABS_VOICE_ID); // ✅ เพิ่ม
+    }
+    
+    sessionStorage.setItem('apiMode', currentMode);
+    apiSettings.classList.add('hidden');
+    alert(`✅ บันทึกโหมด "${currentMode === 'backend' ? 'Backend' : 'Direct API'}" เรียบร้อย!`);
+});
 
     // เริ่มต้น
     document.querySelector(`input[name="apiMode"][value="${currentMode}"]`).checked = true;
