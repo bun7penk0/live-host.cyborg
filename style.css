@@ -16,7 +16,6 @@ html, body {
 }
 
 body {
-    /* ✅ ใช้ 100dvh เพื่อรองรับมือถือที่มีแถบ URL (Dynamic Viewport Height) */
     height: 100dvh;
     display: flex;
     flex-direction: column;
@@ -29,23 +28,40 @@ body {
     overflow: hidden; 
 }
 
+/* === Header === */
 header {
     display: flex; 
     justify-content: space-between; 
     padding: 15px; 
     background: rgba(30, 30, 30, 0.9); 
     z-index: 10;
-    flex-shrink: 0; /* ✅ ไม่ให้ Header ถูกบีบ */
+    flex-shrink: 0;
 }
 
-.badge { background: #333; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; border: 1px solid var(--cyber-blue); color: var(--cyber-blue); }
-.status-badge { background: #9e9e9e; color: white; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; }
+.badge { 
+    background: #333; 
+    padding: 5px 12px; 
+    border-radius: 20px; 
+    font-weight: bold; 
+    font-size: 0.9rem; 
+    border: 1px solid var(--cyber-blue); 
+    color: var(--cyber-blue); 
+}
 
-/* === พื้นที่หลัก (ห้องส่ง) === */
+.status-badge { 
+    background: #9e9e9e; 
+    color: white; 
+    padding: 5px 12px; 
+    border-radius: 20px; 
+    font-weight: bold; 
+    font-size: 0.9rem; 
+}
+
+/* === Studio Area === */
 .studio-container {
     position: relative; 
-    flex: 1; /* ✅ ยืดหยุ่นเต็มพื้นที่ที่เหลือ */
-    min-height: 40vh; /* ✅ ความสูงขั้นต่ำ */
+    flex: 1; 
+    min-height: 40vh; 
     overflow: hidden; 
     display: flex; 
     align-items: center; 
@@ -54,7 +70,7 @@ header {
     background: #000;
 }
 
-/* 🔥 Canvas สำหรับ Matrix */
+/* === Matrix Canvas === */
 #matrixCanvas {
     position: absolute;
     top: 0;
@@ -67,11 +83,9 @@ header {
     transition: opacity 0.3s;
 }
 
-#matrixCanvas.hidden {
-    opacity: 0;
-}
+#matrixCanvas.hidden { opacity: 0; }
 
-/* กรอบล้อมรอบตัวละคร */
+/* === Cyber Frame === */
 .cyber-frame {
     position: relative;
     width: 100%;
@@ -105,7 +119,7 @@ header {
     100% { transform: translateX(100%); }
 }
 
-/* มุมกรอบแบบหุ่นยนต์ 4 มุม */
+/* มุมกรอบ 4 มุม */
 .cyber-corner {
     position: absolute;
     width: 20px;
@@ -118,6 +132,7 @@ header {
 .cyber-corner.bl { bottom: 10px; left: 10px; border-right: none; border-top: none; }
 .cyber-corner.br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
 
+/* === Character === */
 .character-wrapper {
     position: relative; 
     display: flex; 
@@ -137,11 +152,11 @@ header {
     filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.3)); 
 }
 
-/* ลำโพง (ปาก) - ปรับให้เล็กลง */
+/* === Mouth (Mic) === */
 .mouth-part {
     position: absolute; 
-    width: 22px;  /* ✅ ลดจาก 44px เหลือ 22px */
-    height: 22px; /* ✅ ลดจาก 44px เหลือ 22px */
+    width: 22px; 
+    height: 22px; 
     display: flex; 
     justify-content: center; 
     align-items: center; 
@@ -174,10 +189,16 @@ header {
     border-radius: 50%; 
 }
 
-     
-    
+/* Animation ปาก */
+.character-wrapper.talking .mouth-shape { 
+    animation: mouthOpen 0.15s infinite alternate; 
+}
+@keyframes mouthOpen { 
+    0% { transform: scale(1); } 
+    100% { transform: scale(1.3); } 
+}
 
-/* คลื่นเสียง */
+/* === Sound Wave === */
 .sound-wave {
     position: absolute;
     bottom: 20px; 
@@ -208,12 +229,26 @@ header {
 .sound-wave.active .bar:nth-child(4) { animation: wave 1.0s infinite alternate ease-in-out 0.3s; }
 .sound-wave.active .bar:nth-child(5) { animation: wave 0.6s infinite alternate ease-in-out 0.4s; }
 
-@keyframes wave { 0% { height: 5px; } 100% { height: 30px; } }
-
-/* กล่องข้อความ */
-.chat-overlay {
-    position: absolute; top: 15px; left: 15px; width: 85%; max-height: 120px; overflow-y: auto; z-index: 15; display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+@keyframes wave { 
+    0% { height: 5px; } 
+    100% { height: 30px; } 
 }
+
+/* === Chat Overlay === */
+.chat-overlay {
+    position: absolute; 
+    top: 15px; 
+    left: 15px; 
+    width: 85%; 
+    max-height: 120px; 
+    overflow-y: auto; 
+    z-index: 15; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 8px; 
+    pointer-events: none;
+}
+
 .chat-bubble {
     background: rgba(0, 0, 0, 0.6); 
     backdrop-filter: blur(8px);
@@ -225,28 +260,37 @@ header {
     font-size: 0.9rem; 
     animation: slideIn 0.3s ease-out; 
 }
+
 .chat-bubble.bot-reply { border-left-color: var(--cyber-blue); }
 .chat-bubble .user-name { font-weight: bold; margin-right: 5px; color: var(--cyber-yellow); }
 .chat-bubble.bot-reply .user-name { color: var(--cyber-blue); }
-@keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
 
-/* แผงควบคุม */
+@keyframes slideIn { 
+    from { opacity: 0; transform: translateX(-20px); } 
+    to { opacity: 1; transform: translateX(0); } 
+}
+
+/* === Control Panel === */
 .control-panel { 
     background: #1e1e1e; 
     padding: 15px; 
     border-radius: 20px 20px 0 0; 
     z-index: 10; 
     overflow-y: auto; 
-    flex-shrink: 0; /* ✅ ไม่ให้ถูกบีบ */
-    max-height: 50vh; /* ✅ จำกัดความสูงไม่เกินครึ่งจอ */
+    flex-shrink: 0; 
+    max-height: 50vh; 
     border-top: 1px solid var(--cyber-blue);
-    /* เพิ่ม Padding ล่างเพื่อไม่ให้ปุ่มสุดท้ายชิดขอบเกินไป */
     padding-bottom: 30px; 
 }
 
-.section-title { font-size: 1rem; margin-bottom: 5px; color: #ccc; margin-top: 10px;}
+.section-title { 
+    font-size: 1rem; 
+    margin-bottom: 5px; 
+    color: #ccc; 
+    margin-top: 10px;
+}
 
-/* แผงควบคุม Matrix */
+/* === Matrix Controls === */
 .matrix-controls {
     display: flex;
     justify-content: space-between;
@@ -256,34 +300,126 @@ header {
     border-radius: 10px;
     margin-bottom: 15px;
 }
-.matrix-controls h3 { margin: 0; font-size: 0.9rem; color: var(--cyber-blue); }
-.matrix-toggle-group { display: flex; gap: 10px; }
+
+.matrix-controls h3 { 
+    margin: 0; 
+    font-size: 0.9rem; 
+    color: var(--cyber-blue); 
+}
+
+.matrix-toggle-group { 
+    display: flex; 
+    gap: 10px; 
+}
+
 .btn-matrix {
-    background: #444; border: none; color: white; padding: 5px 15px; border-radius: 5px; font-weight: bold; cursor: pointer;
+    background: #444; 
+    border: none; 
+    color: white; 
+    padding: 5px 15px; 
+    border-radius: 5px; 
+    font-weight: bold; 
+    cursor: pointer;
 }
-.btn-matrix.active { background: var(--cyber-blue); color: black; }
+
+.btn-matrix.active { 
+    background: var(--cyber-blue); 
+    color: black; 
+}
+
 .select-matrix {
-    background: #333; color: white; border: 1px solid #555; border-radius: 5px; padding: 5px;
+    background: #333; 
+    color: white; 
+    border: 1px solid #555; 
+    border-radius: 5px; 
+    padding: 5px;
 }
 
-.mock-chat-group { display: flex; gap: 5px; margin-bottom: 10px; }
-.mock-chat-group input { flex: 1; padding: 10px; border-radius: 5px; border: none; background: #333; color: white; }
-.btn-send { padding: 10px 15px; border-radius: 5px; border: none; background: var(--cyber-blue); color: black; font-weight: bold; cursor: pointer;}
+/* === Mock Chat === */
+.mock-chat-group { 
+    display: flex; 
+    gap: 5px; 
+    margin-bottom: 10px; 
+}
 
-.button-group { display: flex; gap: 10px; margin-bottom: 10px; }
-.btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: bold; color: white; cursor: pointer; transition: 0.2s; }
-.btn:active { transform: scale(0.95); }
+.mock-chat-group input { 
+    flex: 1; 
+    padding: 10px; 
+    border-radius: 5px; 
+    border: none; 
+    background: #333; 
+    color: white; 
+}
+
+.btn-send { 
+    padding: 10px 15px; 
+    border-radius: 5px; 
+    border: none; 
+    background: var(--cyber-blue); 
+    color: black; 
+    font-weight: bold; 
+    cursor: pointer;
+}
+
+/* === Test Buttons === */
+.button-group { 
+    display: flex; 
+    gap: 10px; 
+    margin-bottom: 10px; 
+}
+
+.btn { 
+    flex: 1; 
+    padding: 12px; 
+    border: none; 
+    border-radius: 10px; 
+    font-weight: bold; 
+    color: white; 
+    cursor: pointer; 
+    transition: 0.2s; 
+}
+
+.btn:active { 
+    transform: scale(0.95); 
+}
+
 .btn-eye { background: #00796b; }
 .btn-mouth { background: #1976d2; }
-.btn-toggle-drag { background: #f57c00; width: 100%; margin-bottom: 5px; }
-.btn-toggle-drag.active { background: #4caf50; }
-.btn-save { background: var(--cyber-blue); color: black; width: 100%; }
-textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: white; margin-bottom: 10px; resize: none; font-family: inherit; }
 
-/* อนิเมชันปาก */
-.character-wrapper.talking .mouth-shape { animation: mouthOpen 0.15s infinite alternate; }
-@keyframes mouthOpen { 0% { transform: scale(1); } 100% { transform: scale(1.3); } }
-/* === API Settings Modal === */
+.btn-toggle-drag { 
+    background: #f57c00; 
+    width: 100%; 
+    margin-bottom: 5px; 
+}
+
+.btn-toggle-drag.active { 
+    background: #4caf50; 
+}
+
+.btn-save { 
+    background: var(--cyber-blue); 
+    color: black; 
+    width: 100%; 
+}
+
+textarea { 
+    width: 100%; 
+    padding: 10px; 
+    border-radius: 8px; 
+    border: 1px solid #444; 
+    background: #2a2a2a; 
+    color: white; 
+    margin-bottom: 10px; 
+    resize: none; 
+    font-family: inherit; 
+}
+
+/* === Animation: Blink === */
+.character-wrapper.blinking .character-image { 
+    filter: brightness(1.5) drop-shadow(0 0 25px rgba(0, 229, 255, 1)); 
+}
+
+/* === 🔑 API Settings Modal === */
 .api-settings {
     position: fixed;
     top: 50%;
@@ -300,8 +436,13 @@ textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #44
     display: flex;
     flex-direction: column;
     gap: 15px;
+    max-height: 90vh;
+    overflow-y: auto;
 }
-.api-settings.hidden { display: none; }
+
+.api-settings.hidden { 
+    display: none; 
+}
 
 .api-settings h3 { 
     color: var(--cyber-blue); 
@@ -324,43 +465,7 @@ textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #44
     border-color: var(--cyber-blue);
 }
 
-.settings-buttons { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 10px; 
-}
-
-.btn-save-key { 
-    background: var(--cyber-blue); 
-    color: black; 
-    padding: 12px; 
-    border-radius: 8px; 
-    border: none; 
-    font-weight: bold; 
-    cursor: pointer;
-    transition: 0.2s;
-}
-.btn-save-key:active { transform: scale(0.95); }
-
-.btn-clear-key { 
-    background: #f44336; 
-    color: white; 
-    padding: 12px; 
-    border-radius: 8px; 
-    border: none; 
-    font-weight: bold; 
-    cursor: pointer;
-    transition: 0.2s;
-}
-.btn-clear-key:active { transform: scale(0.95); }
-
-.warning { 
-    font-size: 0.75rem; 
-    color: #ffcc00; 
-    text-align: center; 
-    margin-top: 5px;
-}
-/* === Mode Selection (เพิ่มใหม่) === */
+/* === Mode Selection (Backend / Direct) === */
 .mode-selection {
     display: flex;
     flex-direction: column;
@@ -380,7 +485,9 @@ textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #44
     transition: 0.2s;
 }
 
-.mode-option:hover { border-color: var(--cyber-blue); }
+.mode-option:hover { 
+    border-color: var(--cyber-blue); 
+}
 
 .mode-option input[type="radio"] {
     width: 20px;
@@ -397,4 +504,48 @@ textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #44
 
 .mode-option input[type="radio"]:checked + span {
     color: var(--cyber-blue);
+}
+
+/* === Settings Buttons === */
+.settings-buttons { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 10px; 
+}
+
+.btn-save-key { 
+    background: var(--cyber-blue); 
+    color: black; 
+    padding: 12px; 
+    border-radius: 8px; 
+    border: none; 
+    font-weight: bold; 
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-save-key:active { 
+    transform: scale(0.95); 
+}
+
+.btn-clear-key { 
+    background: #f44336; 
+    color: white; 
+    padding: 12px; 
+    border-radius: 8px; 
+    border: none; 
+    font-weight: bold; 
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-clear-key:active { 
+    transform: scale(0.95); 
+}
+
+.warning { 
+    font-size: 0.75rem; 
+    color: #ffcc00; 
+    text-align: center; 
+    margin-top: 5px;
 }
