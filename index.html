@@ -89,21 +89,35 @@
     </div>
 
     <!-- 🔑 Modal ตั้งค่า API Key -->
-    <div class="api-settings" id="apiSettings">
-        <h3>🔑 ตั้งค่า API Key</h3>
-        <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 10px;">Key จะถูกลบอัตโนมัติเมื่อปิดแท็บ</p>
-        
-        <input type="password" id="geminiKeyInput" placeholder="Gemini API Key (AIza...)">
-        <input type="password" id="elevenLabsKeyInput" placeholder="ElevenLabs API Key (sk_...)">
-        
-        <div class="settings-buttons">
-            <button id="btnSaveKeys" class="btn-save-key">✅ บันทึก & เริ่มใช้งาน</button>
-            <button id="btnClearKeys" class="btn-clear-key">🗑️ ลบ Key ทั้งหมด</button>
-        </div>
-        
-        <p class="warning">⚠️ Key จะไม่ถูกบันทึกถาวร (ปลอดภัย)</p>
+<div class="api-settings" id="apiSettings">
+    <h3>🔑 ตั้งค่าโหมดการทำงาน</h3>
+    <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 15px;">เลือกโหมดที่ต้องการ (Key จะถูกลบเมื่อปิดแท็บ)</p>
+    
+    <!-- 🔥 ตัวเลือกโหมด -->
+    <div class="mode-selection">
+        <label class="mode-option">
+            <input type="radio" name="apiMode" value="backend" checked>
+            <span>🌐 ใช้ Backend (แนะนำ)</span>
+        </label>
+        <label class="mode-option">
+            <input type="radio" name="apiMode" value="direct">
+            <span>🔑 ใช้ API Key ส่วนตัว</span>
+        </label>
     </div>
 
+    <!-- 🔑 ส่วนกรอก Key (จะโชว์เฉพาะโหมด Direct) -->
+    <div id="directKeySection" style="display: none; flex-direction: column; gap: 10px;">
+        <input type="password" id="geminiKeyInput" placeholder="Gemini API Key (AIza...)">
+        <input type="password" id="elevenLabsKeyInput" placeholder="ElevenLabs API Key (sk_...)">
+    </div>
+
+    <div class="settings-buttons">
+        <button id="btnSaveKeys" class="btn-save-key">✅ บันทึก & เริ่มใช้งาน</button>
+        <button id="btnClearKeys" class="btn-clear-key">🗑️ ลบ Key ทั้งหมด</button>
+    </div>
+    
+    <p class="warning">⚠️ Key จะไม่ถูกบันทึกถาวร (ปลอดภัย)</p>
+</div>
     <script src="app.js"></script>
 </body>
 </html>
