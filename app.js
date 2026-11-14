@@ -1,5 +1,98 @@
 document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
+    // 🔥 SYSTEM MODE (Backend หรือ Direct)
+    // ==========================================
+    const BACKEND_URL = "https://cyborg-backend-production.up.railway.app";
+    
+    // โหลดโหมดจาก sessionStorage (default = backend)
+    let currentMode = sessionStorage.getItem('apiMode') || 'backend';
+    let GEMINI_KEY = sessionStorage.getItem('geminiKey') || '';
+    let ELEVENLABS_KEY = sessionStorage.getItem('elevenLabsKey') || '';
+    const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+
+    // ==========================================
+    // หน้าตั้งค่า API Key & Mode
+    // ==========================================
+    const apiSettings = document.getElementById('apiSettings');
+    const directKeySection = document.getElementById('directKeySection');
+    const modeRadios = document.querySelectorAll('input[name="apiMode"]');
+
+    // แสดง/ซ่อน Section ตามโหมด
+    function updateModeUI() {
+        if (currentMode === 'direct') {
+            directKeySection.style.display = 'flex';
+        } else {
+            directKeySection.style.display = 'none';
+        }
+    }
+
+    // เปลี่ยนโหมดเมื่อกด Radio
+    modeRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            currentMode = e.target.value;
+            updateModeUI();
+        });
+    });
+
+    // ตรวจสอบว่าพร้อมใช้งานหรือยัง
+    function checkKeys() {
+        if (currentMode === 'backend') {
+            // โหมด Backend ไม่ต้องใช้ Key
+            apiSettings.classList.add('hidden');
+        } else {
+            // โหมด Direct ต้องมี Key ครบ
+            if (GEMINI_KEY && ELEVENLABS_KEY) {
+                apiSettings.classList.add('hidden');
+            } else {
+                apiSettings.classList.remove('hidden');
+            }
+        }
+    }
+
+    // บันทึก Key + Mode
+    document.getElementById('btnSaveKeys').addEventListener('click', () => {
+        const gemini = document.getElementById('geminiKeyInput').value.trim();
+        const eleven = document.getElementById('elevenLabsKeyInput').value.trim();
+        
+        if (currentMode === 'direct') {
+            if (!gemini || !eleven) {
+                alert("กรุณากรอก API Key ให้ครบทั้ง 2 ช่องครับ");
+                return;
+            }
+            GEMINI_KEY = gemini;
+            ELEVENLABS_KEY = eleven;
+            sessionStorage.setItem('geminiKey', gemini);
+            sessionStorage.setItem('elevenLabsKey', eleven);
+        }
+        
+        sessionStorage.setItem('apiMode', currentMode);
+        apiSettings.classList.add('hidden');
+        alert(`✅ บันทึกโหมด "${currentMode === 'backend' ? 'Backend' : 'Direct API'}" เรียบร้อย!`);
+    });
+
+    // ลบ Key ทั้งหมด
+    document.getElementById('btnClearKeys').addEventListener('click', () => {
+        if (confirm("ลบ Key และกลับไปใช้ Backend ใช่ไหมครับ?")) {
+            sessionStorage.removeItem('geminiKey');
+            sessionStorage.removeItem('elevenLabsKey');
+            sessionStorage.removeItem('apiMode');
+            GEMINI_KEY = '';
+            ELEVENLABS_KEY = '';
+            currentMode = 'backend';
+            document.getElementById('geminiKeyInput').value = '';
+            document.getElementById('elevenLabsKeyInput').value = '';
+            document.querySelector('input[name="apiMode"][value="backend"]').checked = true;
+            updateModeUI();
+            checkKeys();
+        }
+    });
+
+    // เริ่มต้น
+    document.querySelector(`input[name="apiMode"][value="${currentMode}"]`).checked = true;
+    updateModeUI();
+    checkKeys();
+document.addEventListener("DOMContentLoaded", () => {
+    // ==========================================
     // 0. API KEYS (เก็บใน sessionStorage)
     // ==========================================
     let GEMINI_KEY = sessionStorage.getItem('geminiKey') || '';
