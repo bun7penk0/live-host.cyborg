@@ -4,7 +4,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
     const BACKEND_URL = "https://cyborg-backend-production.up.railway.app";
     
-    // โหลดค่าจาก sessionStorage
     let currentMode = sessionStorage.getItem('apiMode') || 'backend';
     let GEMINI_KEY = sessionStorage.getItem('geminiKey') || '';
     let ELEVENLABS_KEY = sessionStorage.getItem('elevenLabsKey') || '';
@@ -47,6 +46,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // 2. Settings Modal (API Key Management)
     // ==========================================
     
+    // 🔥 บังคับให้ Modal โผล่ขึ้นมาทุกครั้งที่โหลดหน้า
+    if (apiSettings) {
+        apiSettings.classList.remove('hidden');
+    }
+
     // แสดง/ซ่อน Section ตามโหมด
     function updateModeUI() {
         if (currentMode === 'direct') {
@@ -63,19 +67,6 @@ document.addEventListener("DOMContentLoaded", () => {
             updateModeUI();
         });
     });
-
-    // ตรวจสอบว่าพร้อมใช้งานหรือยัง
-    function checkKeys() {
-        if (currentMode === 'backend') {
-            apiSettings.classList.add('hidden');
-        } else {
-            if (GEMINI_KEY && ELEVENLABS_KEY) {
-                apiSettings.classList.add('hidden');
-            } else {
-                apiSettings.classList.remove('hidden');
-            }
-        }
-    }
 
     // บันทึก Key + Mode
     document.getElementById('btnSaveKeys')?.addEventListener('click', () => {
@@ -122,7 +113,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             document.querySelector('input[name="apiMode"][value="backend"]').checked = true;
             updateModeUI();
-            checkKeys();
         }
     });
 
@@ -130,7 +120,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const currentRadio = document.querySelector(`input[name="apiMode"][value="${currentMode}"]`);
     if (currentRadio) currentRadio.checked = true;
     updateModeUI();
-    checkKeys();
 
     // ==========================================
     // 3. Matrix Background
@@ -213,14 +202,12 @@ document.addEventListener("DOMContentLoaded", () => {
     loadPositions();
 
     // ==========================================
-    // 5. 🔥 AI APIs (Direct & Backend)
+    // 5. 🔥 AI APIs
     // ==========================================
     
-    // เรียก Gemini
     async function callGemini(userMessage) {
         try {
             if (currentMode === 'backend') {
-                // โหมด Backend
                 const response = await fetch(`${BACKEND_URL}/api/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -230,7 +217,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const data = await response.json();
                 return data.reply || "ขอโทษครับ พี่โอมคิดไม่ออก";
             } else {
-                // โหมด Direct API
+                if (!GEMINI_KEY) return "กรุณากรอก Gemini API Key ก่อนครับ";
                 const response = await fetch(
                     `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`,
                     {
@@ -254,9 +241,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // เรียก ElevenLabs
     async function callElevenLabsDirect(text) {
         try {
+            if (!ELEVENLABS_KEY) return null;
             const response = await fetch(
                 `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`,
                 {
@@ -330,17 +317,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     const url = URL.createObjectURL(blob);
                     const audio = new Audio(url);
                     
-                    audio.onended = () => { 
-                        clearTimeout(timeoutId); 
-                        URL.revokeObjectURL(url); 
-                        stopTalkingAnim(); 
-                        safeResolve(); 
-                    };
-                    audio.onerror = () => { 
-                        clearTimeout(timeoutId); 
-                        URL.revokeObjectURL(url); 
-                        fallbackWebSpeech(text, safeResolve); 
-                    };
+                    audio.onended = () => { clearTimeout(timeoutId); URL.revokeObjectURL(url); stopTalkingAnim(); safeResolve(); };
+                    audio.onerror = () => { clearTimeout(timeoutId); URL.revokeObjectURL(url); fallbackWebSpeech(text, safeResolve); };
                     await audio.play();
                 } catch (err) {
                     clearTimeout(timeoutId);
@@ -499,13 +477,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('btnTestBlink')?.addEventListener('click', () => {
         wrapper.classList.add('blinking');
         setTimeout(() => wrapper.classList.remove('blinking'), 150);
-    });
-
-    // ==========================================
-    // 12. Cleanup
-    // ==========================================
-    window.addEventListener('beforeunload', () => {
-        console.log("👋 ปิดหน้าเว็บ - Key จะถูกลบอัตโนมัติ");
     });
 
     console.log(`🚀 AI Host Ready (Mode: ${currentMode})`);
