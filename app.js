@@ -1,23 +1,52 @@
 document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
-    // 🔥 SYSTEM MODE (Backend หรือ Direct)
+    // 🔥 SYSTEM MODE & API KEYS
     // ==========================================
     const BACKEND_URL = "https://cyborg-backend-production.up.railway.app";
     
-    // โหลดโหมดจาก sessionStorage (default = backend)
+    // โหลดค่าจาก sessionStorage
+    let currentMode = sessionStorage.getItem('apiMode') || 'backend';
     let GEMINI_KEY = sessionStorage.getItem('geminiKey') || '';
-let ELEVENLABS_KEY = sessionStorage.getItem('elevenLabsKey') || '';
-// ✅ เพิ่มบรรทัดนี้: ดึง Voice ID จาก sessionStorage (ถ้าไม่มีใช้ค่า default)
-let ELEVENLABS_VOICE_ID = sessionStorage.getItem('elevenLabsVoiceId') || "21m00Tcm4TlvDq8ikWAM";
-    const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+    let ELEVENLABS_KEY = sessionStorage.getItem('elevenLabsKey') || '';
+    let ELEVENLABS_VOICE_ID = sessionStorage.getItem('elevenLabsVoiceId') || "21m00Tcm4TlvDq8ikWAM";
 
     // ==========================================
-    // หน้าตั้งค่า API Key & Mode
+    // DOM Elements
     // ==========================================
+    const mouthPart = document.getElementById('mouthPart');
+    const btnToggleDrag = document.getElementById('btnToggleDrag');
+    const wrapper = document.getElementById('characterWrapper');
+    const studioContainer = document.getElementById('studioContainer');
+    const scriptInput = document.getElementById('scriptInput');
+    const liveStatus = document.getElementById('liveStatus');
+    const chatOverlay = document.getElementById('chatOverlay');
+    const soundWave = document.getElementById('soundWave');
+    const mockChatInput = document.getElementById('mockChatInput'); 
+    
+    // Settings Elements
     const apiSettings = document.getElementById('apiSettings');
     const directKeySection = document.getElementById('directKeySection');
     const modeRadios = document.querySelectorAll('input[name="apiMode"]');
 
+    let isDragMode = false, isDragging = false, posX = 0, posY = -30;
+    let isSpeaking = false, isProcessingQueue = false;
+
+    // ==========================================
+    // 1. Audio Unlock
+    // ==========================================
+    let audioUnlocked = false;
+    function unlockAudio() {
+        if (audioUnlocked) return;
+        const s = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+        s.play().then(() => audioUnlocked = true).catch(() => {});
+    }
+    document.body.addEventListener('click', unlockAudio, { once: true });
+    document.body.addEventListener('touchstart', unlockAudio, { once: true });
+
+    // ==========================================
+    // 2. Settings Modal (API Key Management)
+    // ==========================================
+    
     // แสดง/ซ่อน Section ตามโหมด
     function updateModeUI() {
         if (currentMode === 'direct') {
@@ -38,10 +67,8 @@ let ELEVENLABS_VOICE_ID = sessionStorage.getItem('elevenLabsVoiceId') || "21m00T
     // ตรวจสอบว่าพร้อมใช้งานหรือยัง
     function checkKeys() {
         if (currentMode === 'backend') {
-            // โหมด Backend ไม่ต้องใช้ Key
             apiSettings.classList.add('hidden');
         } else {
-            // โหมด Direct ต้องมี Key ครบ
             if (GEMINI_KEY && ELEVENLABS_KEY) {
                 apiSettings.classList.add('hidden');
             } else {
@@ -51,9 +78,10 @@ let ELEVENLABS_VOICE_ID = sessionStorage.getItem('elevenLabsVoiceId') || "21m00T
     }
 
     // บันทึก Key + Mode
-    document.getElementById('btnSaveKeys').addEventListener('click', () => {
+    document.getElementById('btnSaveKeys')?.addEventListener('click', () => {
         const gemini = document.getElementById('geminiKeyInput').value.trim();
         const eleven = document.getElementById('elevenLabsKeyInput').value.trim();
+        const voiceId = document.getElementById('elevenLabsVoiceIdInput')?.value.trim() || '';
         
         if (currentMode === 'direct') {
             if (!gemini || !eleven) {
@@ -62,8 +90,11 @@ let ELEVENLABS_VOICE_ID = sessionStorage.getItem('elevenLabsVoiceId') || "21m00T
             }
             GEMINI_KEY = gemini;
             ELEVENLABS_KEY = eleven;
+            ELEVENLABS_VOICE_ID = voiceId || "21m00Tcm4TlvDq8ikWAM";
+            
             sessionStorage.setItem('geminiKey', gemini);
             sessionStorage.setItem('elevenLabsKey', eleven);
+            sessionStorage.setItem('elevenLabsVoiceId', ELEVENLABS_VOICE_ID);
         }
         
         sessionStorage.setItem('apiMode', currentMode);
@@ -72,118 +103,37 @@ let ELEVENLABS_VOICE_ID = sessionStorage.getItem('elevenLabsVoiceId') || "21m00T
     });
 
     // ลบ Key ทั้งหมด
-    document.getElementById('btnSaveKeys').addEventListener('click', () => {
-    const gemini = document.getElementById('geminiKeyInput').value.trim();
-    const eleven = document.getElementById('elevenLabsKeyInput').value.trim();
-    const voiceId = document.getElementById('elevenLabsVoiceIdInput').value.trim(); // ✅ เพิ่ม
-    
-    if (currentMode === 'direct') {
-        if (!gemini || !eleven) {
-            alert("กรุณากรอก API Key ให้ครบทั้ง 2 ช่องครับ");
-            return;
-        }
-        GEMINI_KEY = gemini;
-        ELEVENLABS_KEY = eleven;
-        
-        // ✅ บันทึก Voice ID (ถ้าไม่กรอกให้ใช้ค่า default)
-        ELEVENLABS_VOICE_ID = voiceId || "21m00Tcm4TlvDq8ikWAM";
-        
-        sessionStorage.setItem('geminiKey', gemini);
-        sessionStorage.setItem('elevenLabsKey', eleven);
-        sessionStorage.setItem('elevenLabsVoiceId', ELEVENLABS_VOICE_ID); // ✅ เพิ่ม
-    }
-    
-    sessionStorage.setItem('apiMode', currentMode);
-    apiSettings.classList.add('hidden');
-    alert(`✅ บันทึกโหมด "${currentMode === 'backend' ? 'Backend' : 'Direct API'}" เรียบร้อย!`);
-});
-
-    // เริ่มต้น
-    document.querySelector(`input[name="apiMode"][value="${currentMode}"]`).checked = true;
-    updateModeUI();
-    checkKeys();
-document.addEventListener("DOMContentLoaded", () => {
-    // ==========================================
-    // 0. API KEYS (เก็บใน sessionStorage)
-    // ==========================================
-    let GEMINI_KEY = sessionStorage.getItem('geminiKey') || '';
-    let ELEVENLABS_KEY = sessionStorage.getItem('elevenLabsKey') || '';
-    const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
-
-    // ตรวจสอบว่ามี Key หรือยัง ถ้าไม่มีให้แสดงหน้าตั้งค่า
-    const apiSettings = document.getElementById('apiSettings');
-    function checkKeys() {
-        if (!GEMINI_KEY || !ELEVENLABS_KEY) {
-            apiSettings.classList.remove('hidden');
-        } else {
-            apiSettings.classList.add('hidden');
-        }
-    }
-    checkKeys();
-
-    // ปุ่มบันทึก Key
-    document.getElementById('btnSaveKeys').addEventListener('click', () => {
-        const gemini = document.getElementById('geminiKeyInput').value.trim();
-        const eleven = document.getElementById('elevenLabsKeyInput').value.trim();
-        
-        if (!gemini || !eleven) {
-            alert("กรุณากรอก API Key ให้ครบทั้ง 2 ช่องครับ");
-            return;
-        }
-        
-        GEMINI_KEY = gemini;
-        ELEVENLABS_KEY = eleven;
-        sessionStorage.setItem('geminiKey', gemini);
-        sessionStorage.setItem('elevenLabsKey', eleven);
-        
-        apiSettings.classList.add('hidden');
-        alert("✅ บันทึก Key เรียบร้อย! เริ่มใช้งานได้เลย");
-    });
-
-    // ปุ่มลบ Key
-    document.getElementById('btnClearKeys').addEventListener('click', () => {
-        if (confirm("ลบ API Key ทั้งหมดใช่ไหมครับ?")) {
+    document.getElementById('btnClearKeys')?.addEventListener('click', () => {
+        if (confirm("ลบ Key และกลับไปใช้ Backend ใช่ไหมครับ?")) {
             sessionStorage.removeItem('geminiKey');
             sessionStorage.removeItem('elevenLabsKey');
+            sessionStorage.removeItem('elevenLabsVoiceId');
+            sessionStorage.removeItem('apiMode');
+            
             GEMINI_KEY = '';
             ELEVENLABS_KEY = '';
+            ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+            currentMode = 'backend';
+            
             document.getElementById('geminiKeyInput').value = '';
             document.getElementById('elevenLabsKeyInput').value = '';
-            alert("🗑️ ลบ Key เรียบร้อย (จะกลับมาใหม่เมื่อกรอกอีกครั้ง)");
+            if (document.getElementById('elevenLabsVoiceIdInput')) {
+                document.getElementById('elevenLabsVoiceIdInput').value = '';
+            }
+            document.querySelector('input[name="apiMode"][value="backend"]').checked = true;
+            updateModeUI();
             checkKeys();
         }
     });
 
-    // ==========================================
-    // 1. DOM Elements
-    // ==========================================
-    const mouthPart = document.getElementById('mouthPart');
-    const btnToggleDrag = document.getElementById('btnToggleDrag');
-    const wrapper = document.getElementById('characterWrapper');
-    const studioContainer = document.getElementById('studioContainer');
-    const scriptInput = document.getElementById('scriptInput');
-    const liveStatus = document.getElementById('liveStatus');
-    const chatOverlay = document.getElementById('chatOverlay');
-    const soundWave = document.getElementById('soundWave');
-    const mockChatInput = document.getElementById('mockChatInput'); 
-    
-    let isDragMode = false, isDragging = false, posX = 0, posY = -30;
-    let isSpeaking = false, isProcessingQueue = false;
+    // เริ่มต้น
+    const currentRadio = document.querySelector(`input[name="apiMode"][value="${currentMode}"]`);
+    if (currentRadio) currentRadio.checked = true;
+    updateModeUI();
+    checkKeys();
 
     // ==========================================
-    // 2. Audio Unlock
-    // ==========================================
-    let audioUnlocked = false;
-    function unlockAudio() {
-        if (audioUnlocked) return;
-        const s = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
-        s.play().then(() => audioUnlocked = true).catch(() => {});
-    }
-    document.body.addEventListener('click', unlockAudio, { once: true });
-    document.body.addEventListener('touchstart', unlockAudio, { once: true });
-
-    // ==========================================
-    // 3. Matrix (ย่อ)
+    // 3. Matrix Background
     // ==========================================
     const canvas = document.getElementById('matrixCanvas');
     const ctx = canvas.getContext('2d');
@@ -193,12 +143,14 @@ document.addEventListener("DOMContentLoaded", () => {
     let columns, drops;
     
     function initMatrix() {
+        if (!canvas || !studioContainer) return;
         canvas.width = studioContainer.clientWidth;
         canvas.height = studioContainer.clientHeight;
         columns = Math.floor(canvas.width / fontSize);
         drops = Array(columns).fill(1);
     }
     function drawMatrix() {
+        if (!ctx) return;
         ctx.fillStyle = "rgba(0,0,0,0.05)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#00E5FF";
@@ -217,6 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isMatrixOn) startMatrix(); else clearInterval(matrixInterval);
     });
     startMatrix();
+    window.addEventListener('resize', () => { if (isMatrixOn) initMatrix(); });
 
     // ==========================================
     // 4. Mouth Position
@@ -260,36 +213,49 @@ document.addEventListener("DOMContentLoaded", () => {
     loadPositions();
 
     // ==========================================
-    // 5. 🔥 AI APIs (Direct Call - ไม่ใช้ Backend)
+    // 5. 🔥 AI APIs (Direct & Backend)
     // ==========================================
     
-    // เรียก Gemini โดยตรง
+    // เรียก Gemini
     async function callGemini(userMessage) {
         try {
-            const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`,
-                {
+            if (currentMode === 'backend') {
+                // โหมด Backend
+                const response = await fetch(`${BACKEND_URL}/api/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        system_instruction: {
-                            parts: [{ text: "คุณคือพี่โอม พิธีกร AI ครึ่งคนครึ่งไซบอร์ก ให้ตอบสั้นๆ สุภาพ เป็นกันเอง" }]
-                        },
-                        contents: [{ parts: [{ text: userMessage }] }]
-                    })
-                }
-            );
-            const data = await response.json();
-            if (data.error) throw new Error(data.error.message);
-            return data.candidates[0].content.parts[0].text;
+                    body: JSON.stringify({ message: userMessage })
+                });
+                if (!response.ok) throw new Error("Backend failed");
+                const data = await response.json();
+                return data.reply || "ขอโทษครับ พี่โอมคิดไม่ออก";
+            } else {
+                // โหมด Direct API
+                const response = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_KEY}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            system_instruction: {
+                                parts: [{ text: "คุณคือพี่โอม พิธีกร AI ครึ่งคนครึ่งไซบอร์ก ให้ตอบสั้นๆ สุภาพ เป็นกันเอง" }]
+                            },
+                            contents: [{ parts: [{ text: userMessage }] }]
+                        })
+                    }
+                );
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+                return data.candidates[0].content.parts[0].text;
+            }
         } catch (err) {
             console.error("Gemini Error:", err);
             return "ขอโทษครับ พี่โอมคิดไม่ออกตอนนี้";
         }
     }
 
-    // เรียก ElevenLabs โดยตรง
-    async function callElevenLabs(text) {
+    // เรียก ElevenLabs
+    async function callElevenLabsDirect(text) {
         try {
             const response = await fetch(
                 `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`,
@@ -299,10 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         'xi-api-key': ELEVENLABS_KEY,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        text: text,
-                        model_id: "eleven_multilingual_v2"
-                    })
+                    body: JSON.stringify({ text: text, model_id: "eleven_multilingual_v2" })
                 }
             );
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -345,12 +308,53 @@ document.addEventListener("DOMContentLoaded", () => {
         addChatBubble("พี่โอม", text, true);
         startTalkingAnim();
 
-        // ถ้าไม่มี Key หรือใช้ครบ 3 ครั้ง ให้ Web Speech
+        // โหมด Backend
+        if (currentMode === 'backend') {
+            return new Promise(async (resolve) => {
+                let resolved = false;
+                const safeResolve = () => { if (!resolved) { resolved = true; resolve(); } };
+                
+                const timeoutId = setTimeout(() => {
+                    if (!resolved) fallbackWebSpeech(text, safeResolve);
+                }, 5000);
+
+                try {
+                    const response = await fetch(`${BACKEND_URL}/api/tts`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: text })
+                    });
+                    if (!response.ok) throw new Error("Backend TTS failed");
+                    
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const audio = new Audio(url);
+                    
+                    audio.onended = () => { 
+                        clearTimeout(timeoutId); 
+                        URL.revokeObjectURL(url); 
+                        stopTalkingAnim(); 
+                        safeResolve(); 
+                    };
+                    audio.onerror = () => { 
+                        clearTimeout(timeoutId); 
+                        URL.revokeObjectURL(url); 
+                        fallbackWebSpeech(text, safeResolve); 
+                    };
+                    await audio.play();
+                } catch (err) {
+                    clearTimeout(timeoutId);
+                    fallbackWebSpeech(text, safeResolve);
+                }
+            });
+        }
+
+        // โหมด Direct API
         if (!ELEVENLABS_KEY || !canUseElevenLabs()) {
             return new Promise((resolve) => fallbackWebSpeech(text, resolve));
         }
 
-        const blob = await callElevenLabs(text);
+        const blob = await callElevenLabsDirect(text);
         if (!blob) return new Promise((resolve) => fallbackWebSpeech(text, resolve));
 
         return new Promise((resolve) => {
@@ -432,7 +436,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ==========================================
-    // 9. Speech Library (ย่อ)
+    // 9. Speech Library
     // ==========================================
     const speechLibrary = {
         greeting: ["สวัสดีครับทุกคน ยินดีต้อนรับเข้าสู่ไลฟ์ครับ", "แวะเข้ามาทักทายกันได้นะครับ", "วันนี้เป็นอย่างไรกันบ้างครับ"],
@@ -498,13 +502,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ==========================================
-    // 12. ลบ Key อัตโนมัติเมื่อปิดหน้า
+    // 12. Cleanup
     // ==========================================
     window.addEventListener('beforeunload', () => {
-        // ถ้าต้องการให้ Key หายเมื่อปิดแท็บจริงๆ ให้ใช้ sessionStorage
-        // (ทำอยู่แล้วโดยปริยาย - sessionStorage จะหายเองเมื่อปิดแท็บ)
         console.log("👋 ปิดหน้าเว็บ - Key จะถูกลบอัตโนมัติ");
     });
 
-    console.log("🚀 AI Host Ready (Standalone Mode)");
+    console.log(`🚀 AI Host Ready (Mode: ${currentMode})`);
 });
