@@ -50,7 +50,7 @@
         <!-- Control Panel -->
         <div class="control-panel">
             
-            <!-- แผงควบคุม Matrix (ใหม่) -->
+            <!-- แผงควบคุม Matrix -->
             <div class="matrix-controls">
                 <h3>🌐 Matrix Background</h3>
                 <div class="matrix-toggle-group">
@@ -86,6 +86,22 @@
             <button class="btn btn-toggle-drag" id="btnToggleDrag">👉 เปิดโหมดลากปาก</button>
             <button class="btn btn-save" onclick="savePositions()">🔒 บันทึกตำแหน่ง</button>
         </div>
+    </div>
+
+    <!-- 🔑 Modal ตั้งค่า API Key -->
+    <div class="api-settings" id="apiSettings">
+        <h3>🔑 ตั้งค่า API Key</h3>
+        <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 10px;">Key จะถูกลบอัตโนมัติเมื่อปิดแท็บ</p>
+        
+        <input type="password" id="geminiKeyInput" placeholder="Gemini API Key (AIza...)">
+        <input type="password" id="elevenLabsKeyInput" placeholder="ElevenLabs API Key (sk_...)">
+        
+        <div class="settings-buttons">
+            <button id="btnSaveKeys" class="btn-save-key">✅ บันทึก & เริ่มใช้งาน</button>
+            <button id="btnClearKeys" class="btn-clear-key">🗑️ ลบ Key ทั้งหมด</button>
+        </div>
+        
+        <p class="warning">⚠️ Key จะไม่ถูกบันทึกถาวร (ปลอดภัย)</p>
     </div>
 
     <script src="app.js"></script>
